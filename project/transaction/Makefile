@@ -1,4 +1,4 @@
-RMIREGPORT = 3519 
+RMIREGPORT = 4444 
 PROJECTROOT = ..
 
 all : server client
