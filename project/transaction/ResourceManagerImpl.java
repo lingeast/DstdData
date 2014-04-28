@@ -2,7 +2,7 @@ package transaction;
 
 import lockmgr.*;
 import java.rmi.*;
-
+import java.util.HashMap;
 /** 
  * Resource Manager for the Distributed Travel Reservation System.
  * 
@@ -20,6 +20,12 @@ public class ResourceManagerImpl
     carsprice, 
     roomscounter, 
     roomsprice;
+    /////////////////////////////////////////////////////////////////////   
+    HashMap <String, FLIGHT> flights =new HashMap <String, FLIGHT>();
+    HashMap <String, CAR> cars =new HashMap <String, CAR>();
+    HashMap <String, HOTEL> hotels =new HashMap <String, HOTEL>();
+    HashMap <String, CUSTOMER> customers =new HashMap <String, CUSTOMER>();
+    HashMap <String, RESERVATION> reservations =new HashMap <String, RESERVATION>();
     
     protected int xidCounter;
     
@@ -85,8 +91,17 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	flightcounter += numSeats;
-    	flightprice = price;
+        FLIGHT flight;
+        if(flights.containsKey(flightNum))
+        	flight = flights.get(flightNum);
+        else
+        	flight = new FLIGHT(flightNum,0,0,0);
+        flight.price=flight.price<price?price:flight.price;
+        flight.numSeats+=numSeats;
+        flight.numAvail+=numSeats;
+        flights.put(flightNum,flight);
+    	++flightcounter;
+
     	return true;
     }
 
@@ -94,51 +109,86 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	flightcounter = 0;
-    	flightprice = 0;
-    	return true;
+        if(flights.containsKey(flightNum)){
+        	flights.remove(flightNum);
+        	--flightcounter;
+        	return true;
+        }
+        else
+        	return false;
     }
 		
     public boolean addRooms(int xid, String location, int numRooms, int price) 
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	roomscounter += numRooms;
-    	roomsprice = price;
-    	return true;
+        HOTEL hotel;
+        if(hotels.containsKey(location))
+            hotel = hotels.get(location);
+        else
+            hotel = new HOTEL(location,0,0,0);
+        hotel.price=hotel.price<price?price:hotel.price;
+        hotel.numRooms+=numRooms;
+        hotel.numAvail+=numRooms;
+        hotels.put(location,hotel);
+        ++roomscounter;
+        return true;
     }
 
     public boolean deleteRooms(int xid, String location, int numRooms) 
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	roomscounter = 0;
-    	roomsprice = 0;
-    	return true;
+        if(hotels.containsKey(location)){
+        	hotels.remove(location);
+        	--roomscounter;
+            return true;
+        }
+        else
+            return false;
     }
 
     public boolean addCars(int xid, String location, int numCars, int price) 
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	carscounter += numCars;
-    	carsprice = price;
-    	return true;
+        CAR car;
+        if(cars.containsKey(location))
+        	car = cars.get(location);
+        else
+        	car = new CAR(location,0,0,0);
+        car.price=car.price<price?price:car.price;
+        car.numCars+=numCars;
+        car.numAvail+=numCars;
+        cars.put(location,car);
+        ++carscounter;
+        return true;
     }
 
     public boolean deleteCars(int xid, String location, int numCars) 
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	carscounter = 0;
-    	carsprice = 0;
-    	return true;
+        if(cars.containsKey(location)){
+        	cars.remove(location);
+        	--carscounter;
+        	return true;
+    	}
+    	else
+    		return false;
     }
 
     public boolean newCustomer(int xid, String custName) 
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	CUSTOMER cust;
+    	if(customers.containsKey(custName))
+    		cust = customers.get(custName);
+    	else
+    		cust = new CUSTOMER(custName);
+    	customers.put(custName,cust);
+
     	return true;
     }
 
@@ -146,7 +196,12 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	return true;
+    	if(customers.containsKey(custName)){
+    		customers.remove(custName);
+    		return true;
+    	}
+    	else
+    		return false;
     }
 
 
@@ -251,4 +306,75 @@ public class ResourceManagerImpl
     	return true;
     }
 
+}
+
+/////////////////////////////////////////////////////////////////////   
+class FLIGHT{
+	String flightNum;
+	int price;
+	int numSeats;
+	int numAvail;
+	FLIGHT(String flightN){
+		flightNum=flightN;
+		price=0;
+		numSeats=0;
+		numAvail=0;
+	}
+	FLIGHT(String flightN,int pri,int numS,int numA){
+		flightNum=flightN;
+		price=pri;
+		numSeats=numS;
+		numAvail=numA;
+	}
+}
+
+class CAR{
+	String location;
+	int price;
+	int numCars;
+	int numAvail;
+	CAR(String loc){
+		location=loc;	
+	}
+	CAR(String loc,int pri,int numS,int numA){
+		location=loc;
+		price=pri;
+		numCars=numS;
+		numAvail=numA;
+	}
+
+}
+
+class HOTEL{
+	String location;
+	int price;
+	int numRooms;
+	int numAvail;
+	HOTEL(String loc){
+		location=loc;
+	}
+	HOTEL(String loc,int pri,int numS,int numA){
+		location=loc;
+		price=pri;
+		numRooms=numS;
+		numAvail=numA;
+	}
+}
+
+class CUSTOMER{
+	String custName;
+	CUSTOMER(String name){
+		custName=name;
+	}
+}
+
+class RESERVATION{
+	String custName;
+	int resvType;
+	String resvKey;
+	RESERVATION(String name,int resvT,String resvK){
+		custName=name;
+		resvType=resvT;
+		resvKey=resvK;
+	}
 }
