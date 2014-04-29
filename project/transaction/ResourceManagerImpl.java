@@ -21,11 +21,11 @@ public class ResourceManagerImpl
     roomscounter, 
     roomsprice;
     /////////////////////////////////////////////////////////////////////   
-    HashMap <String, FLIGHT> flights =new HashMap <String, FLIGHT>();
-    HashMap <String, CAR> cars =new HashMap <String, CAR>();
-    HashMap <String, HOTEL> hotels =new HashMap <String, HOTEL>();
-    HashMap <String, CUSTOMER> customers =new HashMap <String, CUSTOMER>();
-    HashMap <String, RESERVATION> reservations =new HashMap <String, RESERVATION>();
+    HashMap <String, Flight> flights =new HashMap <String, Flight>();
+    HashMap <String, Car> cars =new HashMap <String, Car>();
+    HashMap <String, Hotel> hotels =new HashMap <String, Hotel>();
+    HashMap <String, Customer> customers =new HashMap <String, Customer>();
+    HashMap <String, Reservation> reservations =new HashMap <String, Reservation>();
     
     protected int xidCounter;
     
@@ -91,11 +91,11 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-        FLIGHT flight;
+        Flight flight;
         if(flights.containsKey(flightNum))
         	flight = flights.get(flightNum);
         else
-        	flight = new FLIGHT(flightNum,0,0,0);
+        	flight = new Flight(flightNum,0,0,0);
         flight.price=flight.price<price?price:flight.price;
         flight.numSeats+=numSeats;
         flight.numAvail+=numSeats;
@@ -122,11 +122,11 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-        HOTEL hotel;
+        Hotel hotel;
         if(hotels.containsKey(location))
             hotel = hotels.get(location);
         else
-            hotel = new HOTEL(location,0,0,0);
+            hotel = new Hotel(location,0,0,0);
         hotel.price=hotel.price<price?price:hotel.price;
         hotel.numRooms+=numRooms;
         hotel.numAvail+=numRooms;
@@ -152,11 +152,11 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-        CAR car;
+        Car car;
         if(cars.containsKey(location))
         	car = cars.get(location);
         else
-        	car = new CAR(location,0,0,0);
+        	car = new Car(location,0,0,0);
         car.price=car.price<price?price:car.price;
         car.numCars+=numCars;
         car.numAvail+=numCars;
@@ -182,11 +182,11 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	CUSTOMER cust;
+    	Customer cust;
     	if(customers.containsKey(custName))
     		cust = customers.get(custName);
     	else
-    		cust = new CUSTOMER(custName);
+    		cust = new Customer(custName);
     	customers.put(custName,cust);
 
     	return true;
@@ -256,7 +256,7 @@ public class ResourceManagerImpl
     }
 
 
-    // RESERVATION INTERFACE
+    // Reservation INTERFACE
     public boolean reserveFlight(int xid, String custName, String flightNum) 
 	throws RemoteException, 
 	       TransactionAbortedException,
@@ -309,18 +309,20 @@ public class ResourceManagerImpl
 }
 
 /////////////////////////////////////////////////////////////////////   
-class FLIGHT{
+class Flight{
 	String flightNum;
 	int price;
 	int numSeats;
 	int numAvail;
-	FLIGHT(String flightN){
+	
+	Flight(String flightN){
 		flightNum=flightN;
 		price=0;
 		numSeats=0;
 		numAvail=0;
 	}
-	FLIGHT(String flightN,int pri,int numS,int numA){
+	
+	Flight(String flightN,int pri,int numS,int numA){
 		flightNum=flightN;
 		price=pri;
 		numSeats=numS;
@@ -328,15 +330,16 @@ class FLIGHT{
 	}
 }
 
-class CAR{
+class Car{
 	String location;
 	int price;
 	int numCars;
 	int numAvail;
-	CAR(String loc){
+	
+	Car(String loc){
 		location=loc;	
 	}
-	CAR(String loc,int pri,int numS,int numA){
+	Car(String loc,int pri,int numS,int numA){
 		location=loc;
 		price=pri;
 		numCars=numS;
@@ -345,15 +348,18 @@ class CAR{
 
 }
 
-class HOTEL{
+class Hotel{
+	
 	String location;
 	int price;
 	int numRooms;
 	int numAvail;
-	HOTEL(String loc){
+	
+	Hotel(String loc){
 		location=loc;
 	}
-	HOTEL(String loc,int pri,int numS,int numA){
+	
+	Hotel(String loc,int pri,int numS,int numA){
 		location=loc;
 		price=pri;
 		numRooms=numS;
@@ -361,18 +367,20 @@ class HOTEL{
 	}
 }
 
-class CUSTOMER{
+class Customer{
 	String custName;
-	CUSTOMER(String name){
+	
+	Customer(String name){
 		custName=name;
 	}
 }
 
-class RESERVATION{
+class Reservation{
 	String custName;
 	int resvType;
 	String resvKey;
-	RESERVATION(String name,int resvT,String resvK){
+	
+	Reservation(String name,int resvT,String resvK){
 		custName=name;
 		resvType=resvT;
 		resvKey=resvK;
