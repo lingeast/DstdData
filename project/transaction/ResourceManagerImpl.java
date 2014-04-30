@@ -3,6 +3,7 @@ package transaction;
 import lockmgr.*;
 import java.rmi.*;
 import java.util.HashMap;
+import java.util.ArrayList;
 /** 
  * Resource Manager for the Distributed Travel Reservation System.
  * 
@@ -25,7 +26,8 @@ public class ResourceManagerImpl
     HashMap <String, Car> cars =new HashMap <String, Car>();
     HashMap <String, Hotel> hotels =new HashMap <String, Hotel>();
     HashMap <String, Customer> customers =new HashMap <String, Customer>();
-    HashMap <String, Reservation> reservations =new HashMap <String, Reservation>();
+    
+    HashMap <String, ArrayList<Reservation>> reservations =new HashMap <String, ArrayList<Reservation>>();
     
     protected int xidCounter;
     
@@ -183,14 +185,14 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	Customer cust;
-    	Reservation rev;
+
     	if(customers.containsKey(custName))
     		//cust = customers.get(custName);
     		return false;
     	else{
     		cust = new Customer(custName);
-		customers.put(custName,cust);
-		return true;
+    		customers.put(custName,cust);
+			return true;
     	}
     }
 
@@ -212,9 +214,9 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-	if(flights.containkey(flightNum))
-		return flights.get(flightNum).numAvail;
-	else
+    	if(flights.containsKey(flightNum))
+			return flights.get(flightNum).numAvail;
+    	else
     		return -1;
     }	
 
@@ -222,9 +224,9 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-	if(flights.containkey(flightNum))
-		return flights.get(flightNum).price;
-	else
+    	if(flights.containsKey(flightNum))
+    		return flights.get(flightNum).price;
+    	else
     		return -1;
     }
 
@@ -232,9 +234,9 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	if(hotels.containkey(location))
-		return hotels.get(location).numAvail;
-	else
+    	if(hotels.containsKey(location))
+    		return hotels.get(location).numAvail;
+    	else
     		return -1;
     }
 
@@ -242,9 +244,9 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	if(hotels.containkey(location))
-		return hotels.get(location).price;
-	else
+    	if(hotels.containsKey(location))
+    		return hotels.get(location).price;
+    	else
     		return -1;
     }
 
@@ -252,9 +254,9 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-	if(cars.containkey(location))
-		return cars.get(location).numAvail;
-	else
+    	if(cars.containsKey(location))
+			return cars.get(location).numAvail;
+    	else
     		return -1;
     }
 
@@ -262,9 +264,9 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	if(cars.containkey(location))
-		return cars.get(location).price;
-	else
+    	if(cars.containsKey(location))
+    		return cars.get(location).price;
+    	else
     		return -1;
     }
 
@@ -272,9 +274,9 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	if(customers.containkey(custName))
-		return customers.get(custName).total;
-	else
+    	if(customers.containsKey(custName))
+    		return customers.get(custName).total;
+    	else
     		return -1;
     }
 
@@ -284,7 +286,15 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	flightcounter--;
+    	Reservation rev = new Reservation(custName,1,flightNum);
+    	ArrayList<Reservation> revlist;
+    	if(!reservations.containsKey(custName)){
+    		revlist= new ArrayList<Reservation>();
+    	}else{
+    		revlist=reservations.get(custName);
+    	}
+		revlist.add(rev);
+		reservations.put(custName, revlist);
     	return true;
     }
  
@@ -292,7 +302,15 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	carscounter--;
+    	Reservation rev = new Reservation(custName,3,location);
+    	ArrayList<Reservation> revlist;
+    	if(!reservations.containsKey(custName)){
+    		revlist= new ArrayList<Reservation>();
+    	}else{
+    		revlist=reservations.get(custName);
+    	}
+		revlist.add(rev);
+		reservations.put(custName, revlist);
     	return true;
     }
 
@@ -300,7 +318,15 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	roomscounter--;
+    	Reservation rev = new Reservation(custName,2,location);
+    	ArrayList<Reservation> revlist;
+    	if(!reservations.containsKey(custName)){
+    		revlist= new ArrayList<Reservation>();
+    	}else{
+    		revlist=reservations.get(custName);
+    	}
+		revlist.add(rev);
+		reservations.put(custName, revlist);
     	return true;
     }
 
@@ -395,6 +421,7 @@ class Customer{
 	int total;
 	Customer(String name){
 		custName=name;
+		total=0;
 	}
 }
 
@@ -402,11 +429,11 @@ class Reservation{
 	String custName;
 	int resvType;
 	String resvKey;
-	
+	//int price; //for possible calculate
 	Reservation(String name,int resvT,String resvK){
 		custName=name;
 		resvType=resvT;
 		resvKey=resvK;
-		total=0;
+		
 	}
 }
