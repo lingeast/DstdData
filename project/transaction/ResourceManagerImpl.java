@@ -183,13 +183,15 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	Customer cust;
+    	Reservation rev;
     	if(customers.containsKey(custName))
-    		cust = customers.get(custName);
-    	else
+    		//cust = customers.get(custName);
+    		return false;
+    	else{
     		cust = new Customer(custName);
-    	customers.put(custName,cust);
-
-    	return true;
+		customers.put(custName,cust);
+		return true;
+    	}
     }
 
     public boolean deleteCustomer(int xid, String custName) 
@@ -210,49 +212,70 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	return flightcounter;
-    }
+	if(flights.containkey(flightNum))
+		return flights.get(flightNum).numAvail;
+	else
+    		return -1;
+    }	
 
     public int queryFlightPrice(int xid, String flightNum)
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	return flightprice;
+	if(flights.containkey(flightNum))
+		return flights.get(flightNum).price;
+	else
+    		return -1;
     }
 
     public int queryRooms(int xid, String location)
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	return roomscounter;
+    	if(hotels.containkey(location))
+		return hotels.get(location).numAvail;
+	else
+    		return -1;
     }
 
     public int queryRoomsPrice(int xid, String location)
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	return roomsprice;
+    	if(hotels.containkey(location))
+		return hotels.get(location).price;
+	else
+    		return -1;
     }
 
     public int queryCars(int xid, String location)
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	return carscounter;
+	if(cars.containkey(location))
+		return cars.get(location).numAvail;
+	else
+    		return -1;
     }
 
     public int queryCarsPrice(int xid, String location)
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	return carsprice;
+    	if(cars.containkey(location))
+		return cars.get(location).price;
+	else
+    		return -1;
     }
 
     public int queryCustomerBill(int xid, String custName)
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	return 0;
+    	if(customers.containkey(custName))
+		return customers.get(custName).total;
+	else
+    		return -1;
     }
 
 
@@ -369,7 +392,7 @@ class Hotel{
 
 class Customer{
 	String custName;
-	
+	int total;
 	Customer(String name){
 		custName=name;
 	}
@@ -384,5 +407,6 @@ class Reservation{
 		custName=name;
 		resvType=resvT;
 		resvKey=resvK;
+		total=0;
 	}
 }
