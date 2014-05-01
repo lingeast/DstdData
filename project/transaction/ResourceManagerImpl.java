@@ -21,12 +21,22 @@ public class ResourceManagerImpl
     carsprice, 
     roomscounter, 
     roomsprice;
-    /////////////////////////////////////////////////////////////////////   
+
+    // Use Hash Map to represent tables
+    
+    // flightNum as primary key
     HashMap <String, Flight> flights =new HashMap <String, Flight>();
+    
+    // location as primary key
     HashMap <String, Car> cars =new HashMap <String, Car>();
+    
+    // location as as primary key
     HashMap <String, Hotel> hotels =new HashMap <String, Hotel>();
+    
+    // custName as primary key
     HashMap <String, Customer> customers =new HashMap <String, Customer>();
     
+    // resvKey as primary key, combined with customer table
     HashMap <String, ArrayList<Reservation>> reservations =new HashMap <String, ArrayList<Reservation>>();
     
     protected int xidCounter;
@@ -98,7 +108,7 @@ public class ResourceManagerImpl
         	flight = flights.get(flightNum);
         else
         	flight = new Flight(flightNum,0,0,0);
-        flight.price=flight.price<price?price:flight.price;
+        flight.price = flight.price < price ? price : flight.price;
         flight.numSeats+=numSeats;
         flight.numAvail+=numSeats;
         flights.put(flightNum,flight);
@@ -129,9 +139,10 @@ public class ResourceManagerImpl
             hotel = hotels.get(location);
         else
             hotel = new Hotel(location,0,0,0);
-        hotel.price=hotel.price<price?price:hotel.price;
-        hotel.numRooms+=numRooms;
-        hotel.numAvail+=numRooms;
+        //hotel.price=hotel.price<price?price:hotel.price;
+        hotel.price = price;	// directly overwrite
+        hotel.numRooms += numRooms;
+        hotel.numAvail += numRooms;
         hotels.put(location,hotel);
         ++roomscounter;
         return true;
@@ -154,14 +165,16 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-        Car car;
+        Car car = null;
         if(cars.containsKey(location))
         	car = cars.get(location);
         else
         	car = new Car(location,0,0,0);
-        car.price=car.price<price?price:car.price;
-        car.numCars+=numCars;
-        car.numAvail+=numCars;
+        //car.price = car.price < price ? price : car.price;
+        
+        car.price = price; // should directly overwrite price
+        car.numCars += numCars;
+        car.numAvail += numCars;
         cars.put(location,car);
         ++carscounter;
         return true;
@@ -184,7 +197,7 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	Customer cust;
+    	Customer cust = null;
 
     	if(customers.containsKey(custName))
     		//cust = customers.get(custName);
@@ -286,7 +299,7 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	Reservation rev = new Reservation(custName,1,flightNum);
+    	Reservation rev = new Reservation(custName, 1, flightNum); // 1 for a flight
     	ArrayList<Reservation> revlist;
     	if(!reservations.containsKey(custName)){
     		revlist= new ArrayList<Reservation>();
@@ -302,7 +315,8 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	Reservation rev = new Reservation(custName,3,location);
+    	// 3 for a car
+    	Reservation rev = new Reservation(custName, 3, location);
     	ArrayList<Reservation> revlist;
     	if(!reservations.containsKey(custName)){
     		revlist= new ArrayList<Reservation>();
@@ -318,6 +332,7 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	// 2 for a hotel room
     	Reservation rev = new Reservation(custName,2,location);
     	ArrayList<Reservation> revlist;
     	if(!reservations.containsKey(custName)){
