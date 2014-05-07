@@ -287,10 +287,14 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	if(customers.containsKey(custName))
-    		return customers.get(custName).total;
+    	ArrayList<Reservation> revlist;
+    	int total=0;
+    	if(reservations.containsKey(custName))
+    		revlist=reservations.get(custName);
     	else
     		return -1;
+    	for(Reservation r:revlist) total+=r.price;
+    	return total;
     }
 
 
@@ -299,7 +303,11 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	Reservation rev = new Reservation(custName, 1, flightNum); // 1 for a flight
+    	int price=0;
+    	if(flights.containsKey(flightNum)){
+    		price=flights.get(flightNum).price;
+    	}else return false;
+    	Reservation rev = new Reservation(custName, 1, flightNum, price); // 1 for a flight
     	ArrayList<Reservation> revlist;
     	if(!reservations.containsKey(custName)){
     		revlist= new ArrayList<Reservation>();
@@ -316,7 +324,11 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	// 3 for a car
-    	Reservation rev = new Reservation(custName, 3, location);
+    	int price=0;
+    	if(cars.containsKey(location)){
+    		price=cars.get(location).price;
+    	}else return false;
+    	Reservation rev = new Reservation(custName, 3, location,price);
     	ArrayList<Reservation> revlist;
     	if(!reservations.containsKey(custName)){
     		revlist= new ArrayList<Reservation>();
@@ -332,8 +344,12 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	int price=0;
+    	if(hotels.containsKey(location)){
+    		price=hotels.get(location).price;
+    	}else return false;
     	// 2 for a hotel room
-    	Reservation rev = new Reservation(custName,2,location);
+    	Reservation rev = new Reservation(custName,2,location,price);
     	ArrayList<Reservation> revlist;
     	if(!reservations.containsKey(custName)){
     		revlist= new ArrayList<Reservation>();
@@ -433,10 +449,10 @@ class Hotel{
 
 class Customer{
 	String custName;
-	int total;
+	//int total;
 	Customer(String name){
 		custName=name;
-		total=0;
+		//total=0;
 	}
 }
 
@@ -444,11 +460,12 @@ class Reservation{
 	String custName;
 	int resvType;
 	String resvKey;
-	//int price; //for possible calculate
-	Reservation(String name,int resvT,String resvK){
+	int price; //for possible calculate
+	Reservation(String name,int resvT,String resvK, int pric){
 		custName=name;
 		resvType=resvT;
 		resvKey=resvK;
+		price=pric;
 		
 	}
 }
