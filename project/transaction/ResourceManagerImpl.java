@@ -1,6 +1,7 @@
 package transaction;
 
 import lockmgr.*;
+
 import java.rmi.*;
 import java.util.HashMap;
 import java.util.ArrayList;
@@ -39,6 +40,9 @@ public class ResourceManagerImpl
     // resvKey as primary key, combined with customer table
     HashMap <String, ArrayList<Reservation>> reservations =new HashMap <String, ArrayList<Reservation>>();
     
+    // updates records, transaction id to updates //list is suitable for small targets
+    HashMap <Integer, ArrayList<Update>> updates =new HashMap <Integer, ArrayList<Update>>();
+    
     protected int xidCounter;
     
     public static void main(String args[]) {
@@ -66,13 +70,6 @@ public class ResourceManagerImpl
     
     
     public ResourceManagerImpl() throws RemoteException {
-    	flightcounter = 0;
-    	flightprice = 0;
-    	carscounter = 0;
-    	carsprice = 0;
-    	roomscounter = 0;
-    	roomsprice = 0;
-    	flightprice = 0;
     	xidCounter = 1;
     }
 
@@ -80,13 +77,29 @@ public class ResourceManagerImpl
     // TRANSACTION INTERFACE
     public int start()
     		throws RemoteException {
-    	return (xidCounter++);
+    	xidCounter++;
+    	ArrayList<Update> newupdate = new ArrayList<Update> ();
+    	updates.put(xidCounter,newupdate);
+    	return xidCounter;
     }
 
     public boolean commit(int xid)
 	throws RemoteException, 
 	       TransactionAbortedException, 
 	       InvalidTransactionException {
+    	//commit the update
+        if(!updates.containsKey(xidCounter)) 
+        	return false;
+        ArrayList<Update> updaterecord = updates.get(xidCounter);
+        for(Update u:updaterecord){
+        	switch(u.updatetype.charAt(0)){
+        	case 1://flight
+        		Flight flight = (Flight)u.update;
+        		flights.put(flight.flightNum,flight);
+        		break;
+        		//.....................
+        	}
+        }
     	System.out.println("Committing");
     	return true;
     }
@@ -103,6 +116,12 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	
+    	//get update entry
+        if(!updates.containsKey(xidCounter)) 
+        	return false;
+        ArrayList<Update> updaterecord = updates.get(xidCounter);
+        
         Flight flight;
         if(flights.containsKey(flightNum))
         	flight = flights.get(flightNum);
@@ -111,9 +130,19 @@ public class ResourceManagerImpl
         flight.price = flight.price < price ? price : flight.price;
         flight.numSeats+=numSeats;
         flight.numAvail+=numSeats;
-        flights.put(flightNum,flight);
-    	++flightcounter;
-
+        //flights.put(flightNum,flight);      //not putting back
+        
+        //putting update entry
+        String target = "1"+"fightnum";
+        for(Update u:updaterecord){
+        	if(u.updatetype==target){
+        		u.update = flight;
+        		return true;
+        	}
+        }
+        //can't find
+        Update newupdate = new Update(target);
+        updaterecord.add(newupdate);
     	return true;
     }
 
@@ -123,7 +152,6 @@ public class ResourceManagerImpl
 	       InvalidTransactionException {
         if(flights.containsKey(flightNum)){
         	flights.remove(flightNum);
-        	--flightcounter;
         	return true;
         }
         else
@@ -144,7 +172,6 @@ public class ResourceManagerImpl
         hotel.numRooms += numRooms;
         hotel.numAvail += numRooms;
         hotels.put(location,hotel);
-        ++roomscounter;
         return true;
     }
 
@@ -154,7 +181,6 @@ public class ResourceManagerImpl
 	       InvalidTransactionException {
         if(hotels.containsKey(location)){
         	hotels.remove(location);
-        	--roomscounter;
             return true;
         }
         else
@@ -176,7 +202,6 @@ public class ResourceManagerImpl
         car.numCars += numCars;
         car.numAvail += numCars;
         cars.put(location,car);
-        ++carscounter;
         return true;
     }
 
@@ -186,7 +211,6 @@ public class ResourceManagerImpl
 	       InvalidTransactionException {
         if(cars.containsKey(location)){
         	cars.remove(location);
-        	--carscounter;
         	return true;
     	}
     	else
@@ -469,3 +493,13 @@ class Reservation{
 		
 	}
 }
+
+class Update{
+	String updatetype;//from 1- 5
+	Object update;
+	Update(String type){
+		updatetype = type;
+		}
+		
+}
+
