@@ -202,15 +202,31 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	
+    	// get transaction
+        TransRes tr = trans.get(xid);
+        if (tr == null){
+        	assert(false);
+        	return false;
+        }
+        
+        HashMap <String, Flight> curFlights = null;
+        if (acqCurPage(tr,"Flights")) {
+        	curFlights = tr.flights;
+        } else {
+        	abort(xid);
+        }
+        
         Flight flight;
-        if(flights.containsKey(flightNum))
-        	flight = flights.get(flightNum);
+        if(curFlights.containsKey(flightNum))
+        	flight = curFlights.get(flightNum);
         else
         	flight = new Flight(flightNum,0,0,0);
-        flight.price = flight.price < price ? price : flight.price;
+        //flight.price = flight.price < price ? price : flight.price;
+        flight.price = price;
         flight.numSeats+=numSeats;
         flight.numAvail+=numSeats;
-        flights.put(flightNum,flight);
+        curFlights.put(flightNum,flight);
     	++flightcounter;
 
     	return true;
@@ -220,29 +236,56 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-        if(flights.containsKey(flightNum)){
-        	flights.remove(flightNum);
+    	// get transaction
+        TransRes tr = trans.get(xid);
+        if (tr == null){
+        	assert(false);
+        	return false;
+        }
+        
+        HashMap <String, Flight> curFlights = null;
+        if (acqCurPage(tr,"Flights")) {
+        	curFlights = tr.flights;
+        } else {
+        	abort(xid);
+        }
+        
+        if(curFlights.containsKey(flightNum)){
+        	curFlights.remove(flightNum);
         	--flightcounter;
         	return true;
-        }
-        else
+        } else
         	return false;
-    }
+    } 
 		
     public boolean addRooms(int xid, String location, int numRooms, int price) 
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-        Hotel hotel;
-        if(hotels.containsKey(location))
-            hotel = hotels.get(location);
+    	// get transaction
+        TransRes tr = trans.get(xid);
+        if (tr == null){
+        	assert(false);
+        	return false;
+        }
+        
+        HashMap <String, Hotel> curHotels = null;
+        if (acqCurPage(tr,"Hotels")) {
+        	curHotels = tr.hotels;
+        } else {
+        	abort(xid);
+        }
+    	
+        Hotel hotel = null;
+        if(curHotels.containsKey(location))
+            hotel = curHotels.get(location);
         else
             hotel = new Hotel(location,0,0,0);
         //hotel.price=hotel.price<price?price:hotel.price;
         hotel.price = price;	// directly overwrite
         hotel.numRooms += numRooms;
         hotel.numAvail += numRooms;
-        hotels.put(location,hotel);
+        curHotels.put(location,hotel);
         ++roomscounter;
         return true;
     }
@@ -251,8 +294,22 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-        if(hotels.containsKey(location)){
-        	hotels.remove(location);
+    	// get transaction
+        TransRes tr = trans.get(xid);
+        if (tr == null){
+        	assert(false);
+        	return false;
+        }
+        
+        HashMap <String, Hotel> curHotels = null;
+        if (acqCurPage(tr,"Hotels")) {
+        	curHotels = tr.hotels;
+        } else {
+        	abort(xid);
+        }
+        
+        if(curHotels.containsKey(location)){
+        	curHotels.remove(location);
         	--roomscounter;
             return true;
         }
@@ -265,7 +322,7 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	
-    	// get right page
+    	// get transaction
         TransRes tr = trans.get(xid);
         if (tr == null){
         	assert(false);
@@ -297,8 +354,22 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-        if(cars.containsKey(location)){
-        	cars.remove(location);
+    	
+    	// get transaction
+        TransRes tr = trans.get(xid);
+        if (tr == null){
+        	assert(false);
+        	return false;
+        }
+        HashMap <String, Car> curCars = null;
+        if (acqCurPage(tr,"Cars")) {
+        	curCars = tr.cars;
+        } else {
+        	abort(xid);
+        }
+        
+        if(curCars.containsKey(location)){
+        	curCars.remove(location);
         	--carscounter;
         	return true;
     	}
@@ -310,14 +381,28 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	// get transaction
+        TransRes tr = trans.get(xid);
+        if (tr == null){
+        	assert(false);
+        	return false;
+        }
+        
+        HashMap <String, Customer> curCustomers = null;
+        if (acqCurPage(tr,"Customers")) {
+        	curCustomers = tr.customers;
+        } else {
+        	abort(xid);
+        }
+        
     	Customer cust = null;
 
-    	if(customers.containsKey(custName))
+    	if(curCustomers.containsKey(custName))
     		//cust = customers.get(custName);
     		return false;
     	else{
     		cust = new Customer(custName);
-    		customers.put(custName,cust);
+    		curCustomers.put(custName,cust);
 			return true;
     	}
     }
@@ -326,8 +411,22 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	if(customers.containsKey(custName)){
-    		customers.remove(custName);
+    	
+    	TransRes tr = trans.get(xid);
+        if (tr == null){
+        	assert(false);
+        	return false;
+        }
+        
+        HashMap <String, Customer> curCustomers = null;
+        if (acqCurPage(tr,"Customers")) {
+        	curCustomers = tr.customers;
+        } else {
+        	abort(xid);
+        }
+        
+    	if(curCustomers.containsKey(custName)){
+    		curCustomers.remove(custName);
     		return true;
     	}
     	else
@@ -340,6 +439,15 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	
+    	// Table level S-lock
+    	try {
+    		lm.lock(xid, "Flights", LockManager.READ);
+    	} catch (DeadlockException e) {
+    		System.err.println(e.getMessage());
+    		abort(xid);
+    	}
+    	
     	if(flights.containsKey(flightNum))
 			return flights.get(flightNum).numAvail;
     	else
@@ -350,6 +458,15 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	
+    	// Table level S-lock
+    	try {
+    		lm.lock(xid, "Flights", LockManager.READ);
+    	} catch (DeadlockException e) {
+    		System.err.println(e.getMessage());
+    		abort(xid);
+    	}
+    	
     	if(flights.containsKey(flightNum))
     		return flights.get(flightNum).price;
     	else
@@ -360,6 +477,15 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	
+    	// Table level S-lock
+    	try {
+    		lm.lock(xid, "Hotels", LockManager.READ);
+    	} catch (DeadlockException e) {
+    		System.err.println(e.getMessage());
+    		abort(xid);
+    	}
+    	
     	if(hotels.containsKey(location))
     		return hotels.get(location).numAvail;
     	else
@@ -370,6 +496,15 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	
+    	// Table level S-lock
+    	try {
+    		lm.lock(xid, "Hotels", LockManager.READ);
+    	} catch (DeadlockException e) {
+    		System.err.println(e.getMessage());
+    		abort(xid);
+    	}
+    	
     	if(hotels.containsKey(location))
     		return hotels.get(location).price;
     	else
@@ -380,6 +515,14 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	// Table level S-lock
+    	try {
+    		lm.lock(xid, "Cars", LockManager.READ);
+    	} catch (DeadlockException e) {
+    		System.err.println(e.getMessage());
+    		abort(xid);
+    	}
+    	
     	if(cars.containsKey(location))
 			return cars.get(location).numAvail;
     	else
@@ -390,6 +533,15 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	
+    	// Table level S-lock
+    	try {
+    		lm.lock(xid, "Cars", LockManager.READ);
+    	} catch (DeadlockException e) {
+    		System.err.println(e.getMessage());
+    		abort(xid);
+    	}
+    	
     	if(cars.containsKey(location))
     		return cars.get(location).price;
     	else
@@ -400,6 +552,14 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	// Table level S-lock
+    	try {
+    		lm.lock(xid, "Reservations", LockManager.READ);
+    	} catch (DeadlockException e) {
+    		System.err.println(e.getMessage());
+    		abort(xid);
+    	}
+    	
     	ArrayList<Reservation> revlist;
     	int total=0;
     	if(reservations.containsKey(custName))
@@ -417,18 +577,46 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	int price=0;
-    	if(flights.containsKey(flightNum)){
-    		price=flights.get(flightNum).price;
-    	}else return false;
+    	
+    	// get transaction
+        TransRes tr = trans.get(xid);
+        if (tr == null){
+        	assert(false);
+        	return false;
+        }
+        
+        HashMap <String, Flight> curFlights = null;
+        if (acqCurPage(tr,"Flights")) {
+        	curFlights = tr.flights;
+        } else {
+        	abort(xid);
+        }
+    	
+        Flight flight = curFlights.get(flightNum);
+    	if(flight != null){
+    		price = flight.price;
+    		--flight.numAvail;
+    		++flight.numSeats;
+    	} else 
+    		return false;
+    	
     	Reservation rev = new Reservation(custName, 1, flightNum, price); // 1 for a flight
     	ArrayList<Reservation> revlist;
-    	if(!reservations.containsKey(custName)){
+    	
+    	HashMap <String, ArrayList<Reservation>> curReservations = null;
+        if (acqCurPage(tr,"Reservations")) {
+        	curReservations = tr.reservations;
+        } else {
+        	abort(xid);
+        }
+        
+    	if(!curReservations.containsKey(custName)){
     		revlist= new ArrayList<Reservation>();
     	}else{
-    		revlist=reservations.get(custName);
+    		revlist=curReservations.get(custName);
     	}
 		revlist.add(rev);
-		reservations.put(custName, revlist);
+		curReservations.put(custName, revlist);
     	return true;
     }
  
@@ -436,21 +624,49 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	// 3 for a car
-    	int price=0;
-    	if(cars.containsKey(location)){
-    		price = cars.get(location).price;
+    	// get transaction
+        TransRes tr = trans.get(xid);
+        if (tr == null){
+        	assert(false);
+        	return false;
+        }
+        
+        int price = 0;
+        
+        HashMap <String, Car> curCars = null;
+        if (acqCurPage(tr,"Cars")) {
+        	curCars = tr.cars;
+        } else {
+        	abort(xid);
+        }
+    	
+        Car car = curCars.get(location);
+    	if(car != null){
+    		price = car.price;
+    		--car.numAvail;
+    		++car.numCars;
+    		
     	} else return false;
-    	//TODO: change cars's available number
+    	
+    	// 3 for a car
     	Reservation rev = new Reservation(custName, 3, location,price);
     	ArrayList<Reservation> revlist;
-    	if(!reservations.containsKey(custName)){
-    		revlist= new ArrayList<Reservation>();
+    	
+        HashMap <String, ArrayList<Reservation>> curReservations = null;
+        if (acqCurPage(tr,"Reservations")) {
+        	curReservations = tr.reservations;
+        } else {
+        	abort(xid);
+        }
+        
+    	if(!curReservations.containsKey(custName)){
+    		revlist = new ArrayList<Reservation>();
     	}else{
-    		revlist=reservations.get(custName);
+    		revlist = curReservations.get(custName);
     	}
+    	
 		revlist.add(rev);
-		reservations.put(custName, revlist);
+		curReservations.put(custName, revlist);
     	return true;
     }
 
@@ -458,20 +674,49 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	
     	int price=0;
-    	if(hotels.containsKey(location)){
-    		price=hotels.get(location).price;
-    	}else return false;
+    	
+    	// get transaction
+        TransRes tr = trans.get(xid);
+        if (tr == null){
+        	assert(false);
+        	return false;
+        }
+        
+        HashMap <String, Hotel> curHotels = null;
+        if (acqCurPage(tr,"Hotels")) {
+        	curHotels = tr.hotels;
+        } else {
+        	abort(xid);
+        }
+    	
+        Hotel hotel = curHotels.get(location);
+    	if(hotel != null){
+    		price = hotel.price;
+    		--hotel.numAvail;
+    		++hotel.numRooms;
+    	} else 
+    		return false;
+    	
     	// 2 for a hotel room
     	Reservation rev = new Reservation(custName,2,location,price);
     	ArrayList<Reservation> revlist;
-    	if(!reservations.containsKey(custName)){
+    	
+    	HashMap <String, ArrayList<Reservation>> curReservations = null;
+        if (acqCurPage(tr,"Reservations")) {
+        	curReservations = tr.reservations;
+        } else {
+        	abort(xid);
+        }
+        
+    	if(!curReservations.containsKey(custName)){
     		revlist= new ArrayList<Reservation>();
     	}else{
-    		revlist=reservations.get(custName);
+    		revlist=curReservations.get(custName);
     	}
 		revlist.add(rev);
-		reservations.put(custName, revlist);
+		curReservations.put(custName, revlist);
     	return true;
     }
 
