@@ -1,6 +1,7 @@
 package transaction;
 
 import lockmgr.*;
+
 import java.rmi.*;
 import java.util.HashMap;
 import java.util.ArrayList;
@@ -13,6 +14,8 @@ import java.util.ArrayList;
 public class ResourceManagerImpl 
     extends java.rmi.server.UnicastRemoteObject
     implements ResourceManager {
+	
+	LockManager lm = new LockManager();
     
     // in this toy, we don't care about location or flight number
     protected int flightcounter, 
@@ -21,26 +24,104 @@ public class ResourceManagerImpl
     carsprice, 
     roomscounter, 
     roomsprice;
+    
+    // Mapping xid to transaction private resources
+    HashMap <Integer, TransRes> trans = new HashMap<Integer, TransRes>();
 
     // Use Hash Map to represent tables
-    
     // flightNum as primary key
-    HashMap <String, Flight> flights =new HashMap <String, Flight>();
+    HashMap <String, Flight> flights = new HashMap <String, Flight>();
     
     // location as primary key
-    HashMap <String, Car> cars =new HashMap <String, Car>();
+    HashMap <String, Car> cars = new HashMap <String, Car>();
     
     // location as as primary key
-    HashMap <String, Hotel> hotels =new HashMap <String, Hotel>();
+    HashMap <String, Hotel> hotels = new HashMap <String, Hotel>();
     
     // custName as primary key
-    HashMap <String, Customer> customers =new HashMap <String, Customer>();
+    HashMap <String, Customer> customers = new HashMap <String, Customer>();
     
-    // resvKey as primary key, combined with customer table
-    HashMap <String, ArrayList<Reservation>> reservations =new HashMap <String, ArrayList<Reservation>>();
+    // resvKey or custName? as primary key, combined with customer table
+    HashMap <String, ArrayList<Reservation>> reservations = new HashMap <String, ArrayList<Reservation>>();
     
     protected int xidCounter;
     
+    // help transaction to acquire a current page on table
+    // implicit X lock on page
+    // return false if failed (deadlock happens)
+    private boolean acqCurPage(TransRes tr, String tableName) {
+    	
+    	
+    	if (tableName.equals("Cars")){
+	    	if (tr.cars == null) {
+	    		try {
+	    			lm.lock(tr.xid, tableName, LockManager.WRITE);
+	    			tr.cars = new HashMap <String, Car>(cars);
+	    		} catch(DeadlockException dle) {	// handle deadlock
+	    			System.err.println(dle.getMessage());
+	    			//abort(xid);
+	    			return false;
+	    		}
+	    	}
+	    	return true;
+    	} else if (tableName.equals("Hotels")){
+	    	if (tr.hotels == null) {
+	    		try {
+	    			lm.lock(tr.xid, tableName, LockManager.WRITE);
+	    			tr.hotels = new HashMap <String, Hotel> (hotels);
+	    		} catch(DeadlockException dle) {	// handle deadlock
+	    			System.err.println(dle.getMessage());
+	    			//abort(xid);
+	    			return false;
+	    		}
+	    		return true;
+	    	}
+    	} else if (tableName.equals("Flights")){
+	    	if (tr.flights == null) {
+	    		try {
+	    			lm.lock(tr.xid, tableName, LockManager.WRITE);
+	    			tr.flights = new HashMap <String, Flight>(flights);
+
+	    		} catch(DeadlockException dle) {	// handle deadlock
+	    			System.err.println(dle.getMessage());
+	    			//abort(xid);
+	    			return false;
+	    		}
+    			return true;
+	    	}
+    	} else if (tableName.equals("Customers")){
+	    	if (tr.customers == null) {
+	    		try {
+	    			lm.lock(tr.xid, tableName, LockManager.WRITE);
+	    			tr.customers = new HashMap<String, Customer>(customers);
+
+	    		} catch(DeadlockException dle) {	// handle deadlock
+	    			System.err.println(dle.getMessage());
+	    			//abort(xid);
+	    			return false;
+	    		}
+    			return true;
+	    	}
+    	} else if (tableName.equals("Reservations")){
+	    	if (tr.reservations == null) {
+	    		try {
+	    			lm.lock(tr.xid, tableName, LockManager.WRITE);
+	    			tr.reservations = new HashMap <String, ArrayList<Reservation>> (reservations);
+
+	    		} catch(DeadlockException dle) {	// handle deadlock
+	    			System.err.println(dle.getMessage());
+	    			//abort(xid);
+	    			return false;
+	    		}
+    			return true;
+	    	}
+    	} else {
+    		System.err.println("Unidentified " + tableName);
+    	}
+    	return false;
+    	
+
+    }
     public static void main(String args[]) {
     	System.setSecurityManager(new RMISecurityManager());
 
@@ -73,14 +154,17 @@ public class ResourceManagerImpl
     	roomscounter = 0;
     	roomsprice = 0;
     	flightprice = 0;
-    	xidCounter = 1;
+    	xidCounter = 0;
     }
 
 
     // TRANSACTION INTERFACE
     public int start()
     		throws RemoteException {
-    	return (xidCounter++);
+    	++xidCounter;
+    	trans.put(xidCounter, new TransRes(xidCounter));
+    	return (xidCounter);
+    	
     }
 
     public boolean commit(int xid)
@@ -88,12 +172,27 @@ public class ResourceManagerImpl
 	       TransactionAbortedException, 
 	       InvalidTransactionException {
     	System.out.println("Committing");
-    	return true;
+    	
+    	TransRes finished = trans.remove(xid);
+    	if (finished == null) 
+    		assert(false);
+    	// update current to be shadow
+    	if (finished.cars != null) cars = finished.cars;
+    	if (finished.hotels != null) hotels = finished.hotels;
+    	if (finished.flights != null) flights = finished.flights;
+    	if (finished.customers != null) customers = finished.customers;
+    	if (finished.reservations != null) reservations = finished.reservations;
+    	
+    	// releases its locks
+    	lm.unlockAll(xid);
+    	
+    	return true; //page shadowing implies page level locking, always return true
     }
 
     public void abort(int xid)
 	throws RemoteException, 
                InvalidTransactionException {
+    	trans.remove(xid);
     	return;
     }
 
@@ -165,9 +264,23 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	
+    	// get right page
+        TransRes tr = trans.get(xid);
+        if (tr == null){
+        	assert(false);
+        	return false;
+        }
+        HashMap <String, Car> curCars = null;
+        if (acqCurPage(tr,"Cars")) {
+        	curCars = tr.cars;
+        } else {
+        	abort(xid);
+        }
+        
         Car car = null;
-        if(cars.containsKey(location))
-        	car = cars.get(location);
+        if(curCars.containsKey(location))
+        	car = curCars.get(location);
         else
         	car = new Car(location,0,0,0);
         //car.price = car.price < price ? price : car.price;
@@ -175,7 +288,7 @@ public class ResourceManagerImpl
         car.price = price; // should directly overwrite price
         car.numCars += numCars;
         car.numAvail += numCars;
-        cars.put(location,car);
+        curCars.put(location,car);
         ++carscounter;
         return true;
     }
@@ -326,8 +439,9 @@ public class ResourceManagerImpl
     	// 3 for a car
     	int price=0;
     	if(cars.containsKey(location)){
-    		price=cars.get(location).price;
-    	}else return false;
+    		price = cars.get(location).price;
+    	} else return false;
+    	//TODO: change cars's available number
     	Reservation rev = new Reservation(custName, 3, location,price);
     	ArrayList<Reservation> revlist;
     	if(!reservations.containsKey(custName)){
@@ -389,7 +503,7 @@ public class ResourceManagerImpl
 }
 
 /////////////////////////////////////////////////////////////////////   
-class Flight{
+ class Flight{
 	String flightNum;
 	int price;
 	int numSeats;
@@ -410,7 +524,7 @@ class Flight{
 	}
 }
 
-class Car{
+ class Car{
 	String location;
 	int price;
 	int numCars;
@@ -428,7 +542,7 @@ class Car{
 
 }
 
-class Hotel{
+ class Hotel{
 	
 	String location;
 	int price;
@@ -447,7 +561,7 @@ class Hotel{
 	}
 }
 
-class Customer{
+ class Customer{
 	String custName;
 	//int total;
 	Customer(String name){
@@ -456,7 +570,7 @@ class Customer{
 	}
 }
 
-class Reservation{
+ class Reservation{
 	String custName;
 	int resvType;
 	String resvKey;
@@ -468,4 +582,53 @@ class Reservation{
 		price=pric;
 		
 	}
+}
+
+ class TransRes {
+	 public final int xid;
+	// Transaction's private current page for shadow paging
+    public HashMap <String, Flight> flights;
+    
+    // location as primary key
+    public HashMap <String, Car> cars;
+    
+    // location as as primary key
+    public HashMap <String, Hotel> hotels;
+    
+    // custName as primary key
+    public HashMap <String, Customer> customers ;
+    
+    // resvKey or custName? as primary key, combined with customer table
+    public HashMap <String, ArrayList<Reservation>> reservations;
+    
+    public TransRes (int xid) {
+    	this.xid = xid;
+    	flights = null;
+    	cars = null;
+    	hotels = null;
+    	customers = null;
+    	reservations = null;
+    }
+    
+    /*
+    public boolean hasFlights() {
+    	return flights;
+    }
+    
+    public boolean hasCars() {
+    	return cars != null;
+    }
+    
+    public boolean hasCustomers() {
+    	return customers != null;
+    }
+    
+    public boolean hasHotels() {
+    	return hotels != null;
+    }
+    
+    public boolean hasReservations() {
+    	return reservations != null;
+    }
+    */
 }

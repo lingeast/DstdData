@@ -7,7 +7,7 @@ server : InvalidTransactionException.class \
          ResourceManager.class \
          ResourceManagerImpl.class \
          ResourceManagerImpl_Stub.class \
-         TransactionAbortedException.class
+         TransactionAbortedException.class 
 
 client: Client.class
 
