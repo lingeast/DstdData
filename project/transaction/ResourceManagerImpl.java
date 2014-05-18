@@ -177,7 +177,11 @@ public class ResourceManagerImpl
     public void abort(int xid)
 	throws RemoteException, 
                InvalidTransactionException {
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"aborting");
     	trans.remove(xid);
+    	// releases its locks
+    	lm.unlockAll(xid);
     	return;
     }
 
@@ -189,11 +193,9 @@ public class ResourceManagerImpl
 	       InvalidTransactionException {
     	
     	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"adding flight="+flightNum);
         TransRes tr = trans.get(xid);
-        if (tr == null){
-        	assert(false);
-        	return false;
-        }
         
         HashMap <String, Flight> curFlights = null;
         if (acqCurPage(tr,"Flights")) {
@@ -208,7 +210,8 @@ public class ResourceManagerImpl
         else
         	flight = new Flight(flightNum,0,0,0);
         //flight.price = flight.price < price ? price : flight.price;
-        flight.price = price;
+        if(price>0)
+        	flight.price = price;
         flight.numSeats+=numSeats;
         flight.numAvail+=numSeats;
         curFlights.put(flightNum,flight);
@@ -221,11 +224,9 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"deleting flight="+flightNum);
         TransRes tr = trans.get(xid);
-        if (tr == null){
-        	assert(false);
-        	return false;
-        }
         
         HashMap <String, Flight> curFlights = null;
         if (acqCurPage(tr,"Flights")) {
@@ -246,11 +247,9 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"adding Rooms="+location);
         TransRes tr = trans.get(xid);
-        if (tr == null){
-        	assert(false);
-        	return false;
-        }
         
         HashMap <String, Hotel> curHotels = null;
         if (acqCurPage(tr,"Hotels")) {
@@ -265,7 +264,8 @@ public class ResourceManagerImpl
         else
             hotel = new Hotel(location,0,0,0);
         //hotel.price=hotel.price<price?price:hotel.price;
-        hotel.price = price;	// directly overwrite
+        if(price>0)
+        	hotel.price = price;	// directly overwrite
         hotel.numRooms += numRooms;
         hotel.numAvail += numRooms;
         curHotels.put(location,hotel);
@@ -277,11 +277,9 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"deleting Rooms="+location);
         TransRes tr = trans.get(xid);
-        if (tr == null){
-        	assert(false);
-        	return false;
-        }
         
         HashMap <String, Hotel> curHotels = null;
         if (acqCurPage(tr,"Hotels")) {
@@ -311,11 +309,10 @@ public class ResourceManagerImpl
 	       InvalidTransactionException {
     	
     	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"adding Cars="+location);
         TransRes tr = trans.get(xid);
-        if (tr == null){
-        	assert(false);
-        	return false;
-        }
+        
         HashMap <String, Car> curCars = null;
         if (acqCurPage(tr,"Cars")) {
         	curCars = tr.cars;
@@ -330,7 +327,8 @@ public class ResourceManagerImpl
         	car = new Car(location,0,0,0);
         //car.price = car.price < price ? price : car.price;
         
-        car.price = price; // should directly overwrite price
+        if(price>0)
+        	car.price = price; // should directly overwrite price
         car.numCars += numCars;
         car.numAvail += numCars;
         curCars.put(location,car);
@@ -343,11 +341,10 @@ public class ResourceManagerImpl
 	       InvalidTransactionException {
     	
     	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"deleting Cars="+location);
         TransRes tr = trans.get(xid);
-        if (tr == null){
-        	assert(false);
-        	return false;
-        }
+        
         HashMap <String, Car> curCars = null;
         if (acqCurPage(tr,"Cars")) {
         	curCars = tr.cars;
@@ -377,11 +374,9 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"adding new customer="+custName);
         TransRes tr = trans.get(xid);
-        if (tr == null){
-        	assert(false);
-        	return false;
-        }
         
         HashMap <String, Customer> curCustomers = null;
         if (acqCurPage(tr,"Customers")) {
@@ -407,11 +402,10 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	
-    	TransRes tr = trans.get(xid);
-        if (tr == null){
-        	assert(false);
-        	return false;
-        }
+    	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"deleting new customer="+custName);
+        TransRes tr = trans.get(xid);
         
         HashMap <String, Customer> curCustomers = null;
         if (acqCurPage(tr,"Customers")) {
@@ -434,7 +428,17 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	
+    	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"querying Flight="+flightNum);
+        TransRes tr = trans.get(xid);
+        
+        if(tr.flights !=null){
+        	if(tr.flights.containsKey(flightNum))
+    			return tr.flights.get(flightNum).numAvail;
+        	else
+        		return -1;
+        }
     	// Table level S-lock
     	try {
     		lm.lock(xid, "Flights", LockManager.READ);
@@ -442,7 +446,7 @@ public class ResourceManagerImpl
     		System.err.println(e.getMessage());
     		abort(xid);
     	}
-    	
+        
     	if(flights.containsKey(flightNum))
 			return flights.get(flightNum).numAvail;
     	else
@@ -453,7 +457,18 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	
+    	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"querying Flight price="+flightNum);
+        TransRes tr = trans.get(xid);
+        
+        if(tr.flights !=null){
+        	if(tr.flights.containsKey(flightNum))
+        		return tr.flights.get(flightNum).price;
+        	else
+        		return -1;
+        }
+
     	// Table level S-lock
     	try {
     		lm.lock(xid, "Flights", LockManager.READ);
@@ -472,7 +487,17 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	
+    	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"querying room="+location);
+        TransRes tr = trans.get(xid);
+        
+        if(tr.hotels !=null){
+        	if(tr.hotels.containsKey(location))
+        		return tr.hotels.get(location).numAvail;
+        	else
+        		return -1;
+        }
     	// Table level S-lock
     	try {
     		lm.lock(xid, "Hotels", LockManager.READ);
@@ -491,7 +516,17 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	
+    	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"querying room price="+location);
+        TransRes tr = trans.get(xid);
+        
+        if(tr.hotels !=null){
+        	if(tr.hotels.containsKey(location))
+        		return tr.hotels.get(location).price;
+        	else
+        		return -1;
+        }
     	// Table level S-lock
     	try {
     		lm.lock(xid, "Hotels", LockManager.READ);
@@ -510,6 +545,17 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"querying cars="+location);
+        TransRes tr = trans.get(xid);
+        
+        if(tr.cars !=null)	{
+        	if(tr.cars.containsKey(location))
+    			return tr.cars.get(location).numAvail;
+        	else
+        		return -1;
+        }
     	// Table level S-lock
     	try {
     		lm.lock(xid, "Cars", LockManager.READ);
@@ -528,7 +574,17 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	
+    	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"querying cars price="+location);
+        TransRes tr = trans.get(xid);
+        
+        if(tr.cars !=null)	{
+        	if(tr.cars.containsKey(location))
+        		return tr.cars.get(location).price;
+        	else
+        		return -1;
+        }
     	// Table level S-lock
     	try {
     		lm.lock(xid, "Cars", LockManager.READ);
@@ -547,6 +603,21 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
+    	int total=0;
+    	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"querying billing of"+custName);
+        TransRes tr = trans.get(xid);
+        
+    	ArrayList<Reservation> revlist;
+        if(tr.reservations !=null)	{ 
+        	if(tr.reservations.containsKey(custName))
+        		revlist=tr.reservations.get(custName);
+        	else
+        		return 0;
+        	for(Reservation r:revlist) total+=r.price;
+        	return total;
+        }
     	// Table level S-lock
     	try {
     		lm.lock(xid, "Reservations", LockManager.READ);
@@ -555,8 +626,6 @@ public class ResourceManagerImpl
     		abort(xid);
     	}
     	
-    	ArrayList<Reservation> revlist;
-    	int total=0;
     	if(reservations.containsKey(custName))
     		revlist=reservations.get(custName);
     	else
@@ -574,11 +643,9 @@ public class ResourceManagerImpl
     	int price=0;
     	
     	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"reserving flight="+custName+"+"+flightNum);
         TransRes tr = trans.get(xid);
-        if (tr == null){
-        	assert(false);
-        	return false;
-        }
         
         HashMap <String, Flight> curFlights = null;
         if (acqCurPage(tr,"Flights")) {
@@ -620,11 +687,9 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"reserving cars="+custName+"+"+location);
         TransRes tr = trans.get(xid);
-        if (tr == null){
-        	assert(false);
-        	return false;
-        }
         
         int price = 0;
         
@@ -673,11 +738,9 @@ public class ResourceManagerImpl
     	int price=0;
     	
     	// get transaction
+    	if(!trans.containsKey(xid)) 
+    		throw new InvalidTransactionException(xid,"reserving room="+custName+"+"+location);
         TransRes tr = trans.get(xid);
-        if (tr == null){
-        	assert(false);
-        	return false;
-        }
         
         HashMap <String, Hotel> curHotels = null;
         if (acqCurPage(tr,"Hotels")) {
