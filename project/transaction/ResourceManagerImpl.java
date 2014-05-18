@@ -66,8 +66,8 @@ public class ResourceManagerImpl
 	    			//abort(xid);
 	    			return false;
 	    		}
-	    		return true;
 	    	}
+	    	return true;
     	} else if (tableName.equals("Flights")){
 	    	if (tr.flights == null) {
 	    		try {
@@ -79,8 +79,8 @@ public class ResourceManagerImpl
 	    			//abort(xid);
 	    			return false;
 	    		}
-    			return true;
 	    	}
+	    	return true;
     	} else if (tableName.equals("Customers")){
 	    	if (tr.customers == null) {
 	    		try {
@@ -92,8 +92,8 @@ public class ResourceManagerImpl
 	    			//abort(xid);
 	    			return false;
 	    		}
-    			return true;
 	    	}
+	    	return true;
     	} else if (tableName.equals("Reservations")){
 	    	if (tr.reservations == null) {
 	    		try {
@@ -105,8 +105,8 @@ public class ResourceManagerImpl
 	    			//abort(xid);
 	    			return false;
 	    		}
-    			return true;
 	    	}
+	    	return true;
     	} else {
     		System.err.println("Unidentified " + tableName);
     	}
@@ -544,7 +544,7 @@ public class ResourceManagerImpl
     	if(reservations.containsKey(custName))
     		revlist=reservations.get(custName);
     	else
-    		return -1;
+    		return 0;
     	for(Reservation r:revlist) total+=r.price;
     	return total;
     }
@@ -677,7 +677,7 @@ public class ResourceManagerImpl
     		++hotel.numRooms;
     	} else 
     		return false;
-    	
+
     	// 2 for a hotel room
     	Reservation rev = new Reservation(custName,2,location,price);
     	ArrayList<Reservation> revlist;
