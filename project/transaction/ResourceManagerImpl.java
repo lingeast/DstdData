@@ -16,9 +16,11 @@ public class ResourceManagerImpl
     extends java.rmi.server.UnicastRemoteObject
     implements ResourceManager {
 	//reservation 
-    public static final int rFlight = 1;
-    public static final int rHotel = 2;
-    public static final int rCar = 3;
+    public static final int FLIGHT = 1;
+    public static final int HOTEL = 2;
+    public static final int CAR = 3;
+    public static final int CUSTOMER = 4;
+    public static final int RESERVATION = 5;
     
 	LockManager lm = new LockManager();
     
@@ -43,32 +45,32 @@ public class ResourceManagerImpl
     
     protected int xidCounter;
     
-    private boolean acqCurEntry(TransRes tr, String tableName, String Primarykey, boolean flag_wr){
-    	//check if it already be in table
+    private boolean acqCurEntry(TransRes tr, int tableName, String Primarykey, boolean flag_wr){
+    	//check if it already be in table // if so and flag = false, return true directly..
     	switch(tableName){
-	    	case "Cars":
+	    	case CAR:
 	    		if(tr.cars.containsKey(Primarykey))
-	    			return true;
+	    			if(!flag_wr)return true;
 	    		else
 	    			break;
-			case "Hotels":
+			case HOTEL:
 	    		if(tr.hotels.containsKey(Primarykey))
 	    			return true;
 	    		else
-	    			break;
-		    case "Flights":
+	    			if(!flag_wr)break;
+		    case FLIGHT:
 		    	if(tr.flights.containsKey(Primarykey))
-		    		return true;
+		    		if(!flag_wr)return true;
 	    		else
 	    			break;
-		    case "Customers":
+		    case CUSTOMER:
 		    	if(tr.customers.containsKey(Primarykey))
-		    		return true;
+		    		if(!flag_wr)return true;
 		    	else
 		    		break;
-	    	case "Reservations":
+	    	case RESERVATION:
 		    	if(tr.reservations.containsKey(Primarykey))
-					return true;
+		    		if(!flag_wr)return true;
 		    	else
 		    		break;
 			default: System.err.println("Unidentified " + tableName);
@@ -98,35 +100,35 @@ public class ResourceManagerImpl
     	if(flag_wr){
         	//create new entry shadowing/logging for write
 		    switch(tableName){
-		    	case "Cars":
+		    	case CAR:
 		    		if(cars.containsKey(Primarykey))
 		    				tr.cars.put(Primarykey,new Car(cars.get(Primarykey)));
 		    		else
 		    				tr.cars.put(Primarykey,new Car(Primarykey));
 			    	return true;
 			    	
-				case "Hotels":
+				case HOTEL:
 		    		if(hotels.containsKey(Primarykey))
 		    				tr.hotels.put(Primarykey,new Hotel(hotels.get(Primarykey)));
 		    		else
 		    				tr.hotels.put(Primarykey,new Hotel(Primarykey));
 			    	return true;
 			
-			    case "Flights":
+			    case FLIGHT:
 			    	if(flights.containsKey(Primarykey))
 		    				tr.flights.put(Primarykey,new Flight(flights.get(Primarykey)));
 		    		else
 		    				tr.flights.put(Primarykey,new Flight(Primarykey));
 			    	return true;
 			    	
-			    case "Customers":
+			    case CUSTOMER:
 			    	if(customers.containsKey(Primarykey))
 							tr.customers.put(Primarykey,new Customer(customers.get(Primarykey)));
 			    	else
 							tr.customers.put(Primarykey,new Customer(Primarykey));
 			    	return true;
 			
-		    	case "Reservations":
+		    	case RESERVATION:
 			    	if(reservations.containsKey(Primarykey))
 							tr.reservations.put(Primarykey,new ArrayList<Reservation>(reservations.get(Primarykey)));
 			    	else
@@ -138,27 +140,27 @@ public class ResourceManagerImpl
 			}
 	    }else{
 		    switch(tableName){
-	    	case "Cars":
+	    	case CAR:
 	    		if(cars.containsKey(Primarykey))
 	    				tr.cars.put(Primarykey,cars.get(Primarykey));
 		    	return true;
 		    	
-			case "Hotels":
+			case HOTEL:
 	    		if(hotels.containsKey(Primarykey))
 	    				tr.hotels.put(Primarykey,hotels.get(Primarykey));
 		    	return true;
 		
-		    case "Flights":
+		    case FLIGHT:
 		    	if(flights.containsKey(Primarykey))
 	    				tr.flights.put(Primarykey,flights.get(Primarykey));
 		    	return true;
 		    	
-		    case "Customers":
+		    case CUSTOMER:
 		    	if(customers.containsKey(Primarykey))
 						tr.customers.put(Primarykey,customers.get(Primarykey));
 		    	return true;
 		
-	    	case "Reservations":
+	    	case RESERVATION:
 		    	if(reservations.containsKey(Primarykey))
 						tr.reservations.put(Primarykey,reservations.get(Primarykey));
 		    	return true;
@@ -375,7 +377,7 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Flight curFlight = null;
-        if (acqCurEntry(tr,"Flights",flightNum,true)) {
+        if (acqCurEntry(tr,FLIGHT,flightNum,true)) {
         	curFlight = tr.flights.get(flightNum);
         } else {
         	abort(xid);
@@ -400,7 +402,7 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Flight curFlight = null;
-        if (acqCurEntry(tr,"Flights",flightNum,true)) {
+        if (acqCurEntry(tr,FLIGHT,flightNum,true)) {
         	curFlight = tr.flights.get(flightNum);
         } else {
         	abort(xid);
@@ -419,7 +421,7 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Hotel curHotel = null;
-        if (acqCurEntry(tr,"Hotels",location,true)) {
+        if (acqCurEntry(tr,HOTEL,location,true)) {
         	curHotel = tr.hotels.get(location);
         } else {
         	abort(xid);
@@ -444,7 +446,7 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Hotel curHotel = null;
-        if (acqCurEntry(tr,"Hotels",location,true)) {
+        if (acqCurEntry(tr,HOTEL,location,true)) {
         	curHotel = tr.hotels.get(location);
         } else {
         	abort(xid);
@@ -473,7 +475,7 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Car curCar = null;
-        if (acqCurEntry(tr,"Cars",location,true)) {
+        if (acqCurEntry(tr,CAR,location,true)) {
         	curCar = tr.cars.get(location);
         } else {
         	abort(xid);
@@ -498,7 +500,7 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Car curCar = null;
-        if (acqCurEntry(tr,"Cars",location,true)) {
+        if (acqCurEntry(tr,CAR,location,true)) {
         	curCar = tr.cars.get(location);
         } else {
         	abort(xid);
@@ -525,7 +527,7 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Customer curCustomer = null;
-        if (acqCurEntry(tr,"Customers",custName,true)) {
+        if (acqCurEntry(tr,CUSTOMER,custName,true)) {
         	curCustomer = tr.customers.get(custName);
         } else {
         	abort(xid);
@@ -544,7 +546,7 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Customer curCustomer = null;
-        if (acqCurEntry(tr,"Customers",custName,true)) {
+        if (acqCurEntry(tr,CUSTOMER,custName,true)) {
         	curCustomer = tr.customers.get(custName);
         } else {
         	abort(xid);
@@ -566,7 +568,7 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Flight curFlight = null;
-        if (acqCurEntry(tr,"Flights",flightNum,false)) {
+        if (acqCurEntry(tr,FLIGHT,flightNum,false)) {
         	curFlight = tr.flights.get(flightNum);
         } else {
         	abort(xid);
@@ -588,7 +590,7 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Flight curFlight = null;
-        if (acqCurEntry(tr,"Flights",flightNum,false)) {
+        if (acqCurEntry(tr,FLIGHT,flightNum,false)) {
         	curFlight = tr.flights.get(flightNum);
         } else {
         	abort(xid);
@@ -610,7 +612,7 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Hotel curHotel = null;
-        if (acqCurEntry(tr,"Hotels",location,false)) {
+        if (acqCurEntry(tr,HOTEL,location,false)) {
         	curHotel = tr.hotels.get(location);
         } else {
         	abort(xid);
@@ -632,7 +634,7 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Hotel curHotel = null;
-        if (acqCurEntry(tr,"Hotels",location,false)) {
+        if (acqCurEntry(tr,HOTEL,location,false)) {
         	curHotel = tr.hotels.get(location);
         } else {
         	abort(xid);
@@ -654,7 +656,7 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Car curCar = null;
-        if (acqCurEntry(tr,"Cars",location,false)) {
+        if (acqCurEntry(tr,CAR,location,false)) {
         	curCar = tr.cars.get(location);
         } else {
         	abort(xid);
@@ -676,7 +678,7 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Car curCar = null;
-        if (acqCurEntry(tr,"Cars",location,false)) {
+        if (acqCurEntry(tr,CAR,location,false)) {
         	curCar = tr.cars.get(location);
         } else {
         	abort(xid);
@@ -699,7 +701,7 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
     	ArrayList<Reservation> curRevlist = null;
-         if (acqCurEntry(tr,"Reservations",custName,false)) {
+         if (acqCurEntry(tr,RESERVATION,custName,false)) {
         	 curRevlist = tr.reservations.get(custName);
          } else {
          	abort(xid);
@@ -709,20 +711,20 @@ public class ResourceManagerImpl
     		return 0;
     	for(Reservation r:curRevlist) {
     		switch(r.resvType){
-    			case rFlight:
-    				if (acqCurEntry(tr,"Flights",r.resvKey,false)) 
+    			case FLIGHT:
+    				if (acqCurEntry(tr,FLIGHT,r.resvKey,false)) 
     					total +=  tr.flights.get(r.resvKey).price;
     				else
     					abort(xid);
     				break;
-    			case rHotel:
-    				if (acqCurEntry(tr,"Hotels",r.resvKey,false)) 
+    			case HOTEL:
+    				if (acqCurEntry(tr,HOTEL,r.resvKey,false)) 
     					total +=  tr.hotels.get(r.resvKey).price;
     				else
     					abort(xid);
     				break;
-    			case rCar:
-    				if (acqCurEntry(tr,"Cars",r.resvKey,false)) 
+    			case CAR:
+    				if (acqCurEntry(tr,CAR,r.resvKey,false)) 
     					total +=  tr.cars.get(r.resvKey).price;
     				else
     					abort(xid);
@@ -747,14 +749,14 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Flight curFlight = null;
-        if (acqCurEntry(tr,"Flights",flightNum,true)) {
+        if (acqCurEntry(tr,FLIGHT,flightNum,true)) {
         	curFlight = tr.flights.get(flightNum);
         } else {
         	abort(xid);
         }
         
     	ArrayList<Reservation> curRevlist = null;
-        if (acqCurEntry(tr,"Reservations",custName,true)) {
+        if (acqCurEntry(tr,RESERVATION,custName,true)) {
        	 curRevlist = tr.reservations.get(custName);
         } else {
         	abort(xid);
@@ -784,14 +786,14 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Car curCar = null;
-        if (acqCurEntry(tr,"Cars",location,true)) {
+        if (acqCurEntry(tr,CAR,location,true)) {
         	curCar = tr.cars.get(location);
         } else {
         	abort(xid);
         }
         
     	ArrayList<Reservation> curRevlist = null;
-        if (acqCurEntry(tr,"Reservations",custName,true)) {
+        if (acqCurEntry(tr,RESERVATION,custName,true)) {
        	 curRevlist = tr.reservations.get(custName);
         } else {
         	abort(xid);
@@ -822,14 +824,14 @@ public class ResourceManagerImpl
         TransRes tr = trans.get(xid);
         
         Hotel curHotel = null;
-        if (acqCurEntry(tr,"Hotels",location,true)) {
+        if (acqCurEntry(tr,HOTEL,location,true)) {
         	curHotel = tr.hotels.get(location);
         } else {
         	abort(xid);
         }
         
     	ArrayList<Reservation> curRevlist = null;
-        if (acqCurEntry(tr,"Reservations",custName,true)) {
+        if (acqCurEntry(tr,RESERVATION,custName,true)) {
        	 curRevlist = tr.reservations.get(custName);
         } else {
         	abort(xid);
