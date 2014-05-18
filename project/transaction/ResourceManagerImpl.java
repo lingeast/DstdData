@@ -17,14 +17,6 @@ public class ResourceManagerImpl
 	
 	LockManager lm = new LockManager();
     
-    // in this toy, we don't care about location or flight number
-    protected int flightcounter, 
-    flightprice, 
-    carscounter, 
-    carsprice, 
-    roomscounter, 
-    roomsprice;
-    
     // Mapping xid to transaction private resources
     HashMap <Integer, TransRes> trans = new HashMap<Integer, TransRes>();
 
@@ -147,13 +139,6 @@ public class ResourceManagerImpl
     
     
     public ResourceManagerImpl() throws RemoteException {
-    	flightcounter = 0;
-    	flightprice = 0;
-    	carscounter = 0;
-    	carsprice = 0;
-    	roomscounter = 0;
-    	roomsprice = 0;
-    	flightprice = 0;
     	xidCounter = 0;
     }
 
@@ -227,7 +212,6 @@ public class ResourceManagerImpl
         flight.numSeats+=numSeats;
         flight.numAvail+=numSeats;
         curFlights.put(flightNum,flight);
-    	++flightcounter;
 
     	return true;
     }
@@ -252,7 +236,6 @@ public class ResourceManagerImpl
         
         if(curFlights.containsKey(flightNum)){
         	curFlights.remove(flightNum);
-        	--flightcounter;
         	return true;
         } else
         	return false;
@@ -286,7 +269,6 @@ public class ResourceManagerImpl
         hotel.numRooms += numRooms;
         hotel.numAvail += numRooms;
         curHotels.put(location,hotel);
-        ++roomscounter;
         return true;
     }
 
@@ -310,7 +292,6 @@ public class ResourceManagerImpl
         
         if(curHotels.containsKey(location)){
         	curHotels.remove(location);
-        	--roomscounter;
             return true;
         }
         else
@@ -346,7 +327,6 @@ public class ResourceManagerImpl
         car.numCars += numCars;
         car.numAvail += numCars;
         curCars.put(location,car);
-        ++carscounter;
         return true;
     }
 
@@ -370,7 +350,6 @@ public class ResourceManagerImpl
         
         if(curCars.containsKey(location)){
         	curCars.remove(location);
-        	--carscounter;
         	return true;
     	}
     	else
