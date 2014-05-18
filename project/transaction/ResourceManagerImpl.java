@@ -5,6 +5,7 @@ import lockmgr.*;
 import java.rmi.*;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Map;
 /** 
  * Resource Manager for the Distributed Travel Reservation System.
  * 
@@ -14,7 +15,11 @@ import java.util.ArrayList;
 public class ResourceManagerImpl 
     extends java.rmi.server.UnicastRemoteObject
     implements ResourceManager {
-	
+	//reservation 
+    public static final int rFlight = 1;
+    public static final int rHotel = 2;
+    public static final int rCar = 3;
+    
 	LockManager lm = new LockManager();
     
     // Mapping xid to transaction private resources
@@ -33,15 +38,141 @@ public class ResourceManagerImpl
     // custName as primary key
     HashMap <String, Customer> customers = new HashMap <String, Customer>();
     
-    // resvKey or custName? as primary key, combined with customer table
+    // custName as primary key, combined with customer table
     HashMap <String, ArrayList<Reservation>> reservations = new HashMap <String, ArrayList<Reservation>>();
     
     protected int xidCounter;
     
+    private boolean acqCurEntry(TransRes tr, String tableName, String Primarykey, boolean flag_wr){
+    	//check if it already be in table
+    	switch(tableName){
+	    	case "Cars":
+	    		if(tr.cars.containsKey(Primarykey))
+	    			return true;
+	    		else
+	    			break;
+			case "Hotels":
+	    		if(tr.hotels.containsKey(Primarykey))
+	    			return true;
+	    		else
+	    			break;
+		    case "Flights":
+		    	if(tr.flights.containsKey(Primarykey))
+		    		return true;
+	    		else
+	    			break;
+		    case "Customers":
+		    	if(tr.customers.containsKey(Primarykey))
+		    		return true;
+		    	else
+		    		break;
+	    	case "Reservations":
+		    	if(tr.reservations.containsKey(Primarykey))
+					return true;
+		    	else
+		    		break;
+			default: System.err.println("Unidentified " + tableName);
+				return false;
+    	}
+    	//locking flag = true means write
+    	if(flag_wr){
+	    	try {
+				lm.lock(tr.xid, tableName+Primarykey, LockManager.WRITE);
+	    	} catch(DeadlockException dle) {	// handle deadlock
+				System.err.println(dle.getMessage());
+				//abort(xid);
+				return false;
+			}
+    	}
+    	else{
+        	try {
+    			lm.lock(tr.xid, tableName+Primarykey, LockManager.READ);
+        	} catch(DeadlockException dle) {	// handle deadlock
+    			System.err.println(dle.getMessage());
+    			//abort(xid);
+    			return false;
+    		}
+    		
+    	}
+
+    	if(flag_wr){
+        	//create new entry shadowing/logging for write
+		    switch(tableName){
+		    	case "Cars":
+		    		if(cars.containsKey(Primarykey))
+		    				tr.cars.put(Primarykey,new Car(cars.get(Primarykey)));
+		    		else
+		    				tr.cars.put(Primarykey,new Car(Primarykey));
+			    	return true;
+			    	
+				case "Hotels":
+		    		if(hotels.containsKey(Primarykey))
+		    				tr.hotels.put(Primarykey,new Hotel(hotels.get(Primarykey)));
+		    		else
+		    				tr.hotels.put(Primarykey,new Hotel(Primarykey));
+			    	return true;
+			
+			    case "Flights":
+			    	if(flights.containsKey(Primarykey))
+		    				tr.flights.put(Primarykey,new Flight(flights.get(Primarykey)));
+		    		else
+		    				tr.flights.put(Primarykey,new Flight(Primarykey));
+			    	return true;
+			    	
+			    case "Customers":
+			    	if(customers.containsKey(Primarykey))
+							tr.customers.put(Primarykey,new Customer(customers.get(Primarykey)));
+			    	else
+							tr.customers.put(Primarykey,new Customer(Primarykey));
+			    	return true;
+			
+		    	case "Reservations":
+			    	if(reservations.containsKey(Primarykey))
+							tr.reservations.put(Primarykey,new ArrayList<Reservation>(reservations.get(Primarykey)));
+			    	else
+							tr.reservations.put(Primarykey,new ArrayList<Reservation>());
+			    	return true;
+		
+				default: System.err.println("Unidentified " + tableName);
+	
+			}
+	    }else{
+		    switch(tableName){
+	    	case "Cars":
+	    		if(cars.containsKey(Primarykey))
+	    				tr.cars.put(Primarykey,cars.get(Primarykey));
+		    	return true;
+		    	
+			case "Hotels":
+	    		if(hotels.containsKey(Primarykey))
+	    				tr.hotels.put(Primarykey,hotels.get(Primarykey));
+		    	return true;
+		
+		    case "Flights":
+		    	if(flights.containsKey(Primarykey))
+	    				tr.flights.put(Primarykey,flights.get(Primarykey));
+		    	return true;
+		    	
+		    case "Customers":
+		    	if(customers.containsKey(Primarykey))
+						tr.customers.put(Primarykey,customers.get(Primarykey));
+		    	return true;
+		
+	    	case "Reservations":
+		    	if(reservations.containsKey(Primarykey))
+						tr.reservations.put(Primarykey,reservations.get(Primarykey));
+		    	return true;
+	
+			default: System.err.println("Unidentified " + tableName);
+
+		}
+	    }
+		return false;
+	}
     // help transaction to acquire a current page on table
     // implicit X lock on page
     // return false if failed (deadlock happens)
-    private boolean acqCurPage(TransRes tr, String tableName) {
+   /* private boolean acqCurPage(TransRes tr, String tableName) {
     	
     	
     	if (tableName.equals("Cars")){
@@ -113,7 +244,7 @@ public class ResourceManagerImpl
     	return false;
     	
 
-    }
+    }*/
     public static void main(String args[]) {
     	System.setSecurityManager(new RMISecurityManager());
 
@@ -162,12 +293,58 @@ public class ResourceManagerImpl
     	if (finished == null) 
     		assert(false);
     	// update current to be shadow
-    	if (finished.cars != null) cars = finished.cars;
-    	if (finished.hotels != null) hotels = finished.hotels;
-    	if (finished.flights != null) flights = finished.flights;
-    	if (finished.customers != null) customers = finished.customers;
-    	if (finished.reservations != null) reservations = finished.reservations;
     	
+    	if (finished.cars != null) {
+    		HashMap <String, Car> cars_shadowing = new HashMap <String, Car>(cars);
+    		for (String key : finished.cars.keySet()) {
+    			if(finished.cars.get(key).location!=null)
+    				cars_shadowing.put(key, finished.cars.get(key));
+    			else
+    				cars_shadowing.remove(key);
+    		}
+    		cars = cars_shadowing;
+    	}
+    	
+    	if (finished.hotels != null){
+    		HashMap <String, Hotel> hotels_shadowing = new HashMap <String, Hotel>(hotels);
+    		for (String key : finished.hotels.keySet()) {
+    			if(finished.hotels.get(key).location!=null)
+    				hotels_shadowing.put(key, finished.hotels.get(key));
+    			else
+    				hotels_shadowing.remove(key);
+    		}
+    		hotels = hotels_shadowing;
+    	}
+    	
+    	if (finished.flights != null) {
+    		HashMap <String, Flight> flights_shadowing = new HashMap <String, Flight>(flights);
+    		for (String key : finished.flights.keySet()) {
+    			if(finished.flights.get(key).flightNum!=null)
+    				flights_shadowing.put(key, finished.flights.get(key));
+    			else
+    				flights_shadowing.remove(key);
+    		}
+    		flights = flights_shadowing;
+    	}
+    	
+    	if (finished.customers != null){
+    		HashMap <String, Customer> customers_shadowing = new HashMap <String, Customer>(customers);
+    		for (String key : finished.customers.keySet()) {
+    			if(finished.customers.get(key).custName!=null)
+    				customers_shadowing.put(key, finished.customers.get(key));
+    			else
+    				customers_shadowing.remove(key);
+    		}
+    		customers = customers_shadowing;
+    	}
+ 
+    	if (finished.reservations != null) {
+    		HashMap <String, ArrayList<Reservation>> reservations_shadowing = new HashMap <String, ArrayList<Reservation>>(reservations);
+    		for (String key : finished.customers.keySet()) {
+    				reservations_shadowing.put(key, finished.reservations.get(key));
+    		}
+    		reservations = reservations_shadowing;
+    	}
     	// releases its locks
     	lm.unlockAll(xid);
     	
@@ -197,24 +374,18 @@ public class ResourceManagerImpl
     		throw new InvalidTransactionException(xid,"adding flight="+flightNum);
         TransRes tr = trans.get(xid);
         
-        HashMap <String, Flight> curFlights = null;
-        if (acqCurPage(tr,"Flights")) {
-        	curFlights = tr.flights;
+        Flight curFlight = null;
+        if (acqCurEntry(tr,"Flights",flightNum,true)) {
+        	curFlight = tr.flights.get(flightNum);
         } else {
         	abort(xid);
         }
         
-        Flight flight;
-        if(curFlights.containsKey(flightNum))
-        	flight = new Flight(curFlights.get(flightNum));
-        else
-        	flight = new Flight(flightNum,0,0,0);
-        //flight.price = flight.price < price ? price : flight.price;
         if(price>0)
-        	flight.price = price;
-        flight.numSeats+=numSeats;
-        flight.numAvail+=numSeats;
-        curFlights.put(flightNum,flight);
+        	curFlight.price = price;
+        curFlight.numSeats+=numSeats;
+        curFlight.numAvail+=numSeats;
+        //tr.flights.put(flightNum,curFlight);   //no need
 
     	return true;
     }
@@ -228,18 +399,14 @@ public class ResourceManagerImpl
     		throw new InvalidTransactionException(xid,"deleting flight="+flightNum);
         TransRes tr = trans.get(xid);
         
-        HashMap <String, Flight> curFlights = null;
-        if (acqCurPage(tr,"Flights")) {
-        	curFlights = tr.flights;
+        Flight curFlight = null;
+        if (acqCurEntry(tr,"Flights",flightNum,true)) {
+        	curFlight = tr.flights.get(flightNum);
         } else {
         	abort(xid);
         }
-        
-        if(curFlights.containsKey(flightNum)){
-        	curFlights.remove(flightNum);
-        	return true;
-        } else
-        	return false;
+        curFlight.flightNum = null;
+    	return true;
     } 
 		
     public boolean addRooms(int xid, String location, int numRooms, int price) 
@@ -251,24 +418,19 @@ public class ResourceManagerImpl
     		throw new InvalidTransactionException(xid,"adding Rooms="+location);
         TransRes tr = trans.get(xid);
         
-        HashMap <String, Hotel> curHotels = null;
-        if (acqCurPage(tr,"Hotels")) {
-        	curHotels = tr.hotels;
+        Hotel curHotel = null;
+        if (acqCurEntry(tr,"Hotels",location,true)) {
+        	curHotel = tr.hotels.get(location);
         } else {
         	abort(xid);
         }
     	
-        Hotel hotel = null;
-        if(curHotels.containsKey(location))
-            hotel = new Hotel(curHotels.get(location));
-        else
-            hotel = new Hotel(location,0,0,0);
         //hotel.price=hotel.price<price?price:hotel.price;
         if(price>0)
-        	hotel.price = price;	// directly overwrite
-        hotel.numRooms += numRooms;
-        hotel.numAvail += numRooms;
-        curHotels.put(location,hotel);
+        	curHotel.price = price;	// directly overwrite
+        curHotel.numRooms += numRooms;
+        curHotel.numAvail += numRooms;
+
         return true;
     }
 
@@ -281,25 +443,22 @@ public class ResourceManagerImpl
     		throw new InvalidTransactionException(xid,"deleting Rooms="+location);
         TransRes tr = trans.get(xid);
         
-        HashMap <String, Hotel> curHotels = null;
-        if (acqCurPage(tr,"Hotels")) {
-        	curHotels = tr.hotels;
+        Hotel curHotel = null;
+        if (acqCurEntry(tr,"Hotels",location,true)) {
+        	curHotel = tr.hotels.get(location);
         } else {
         	abort(xid);
         }
         
-        Hotel hotel = null;
-        if(curHotels.containsKey(location))
-            hotel = new Hotel(curHotels.get(location));
-        else
-            hotel = new Hotel(location,0,0,0);
-        hotel.numRooms -= numRooms;
-        hotel.numAvail -= numRooms;
+        if(curHotel.numAvail<numRooms||curHotel.numRooms<numRooms)
+        	return false;  
+        
+        curHotel.numRooms -= numRooms;
+        curHotel.numAvail -= numRooms;
 
-        if(hotel.numAvail<0||hotel.numRooms<0)
-        	return false;
-        if(hotel.numRooms==0) curHotels.remove(location);
-        else curHotels.put(location,hotel);
+        if(curHotel.numRooms==0) 
+        	curHotel.location=null;
+      
         return true;
     }
 
@@ -313,25 +472,18 @@ public class ResourceManagerImpl
     		throw new InvalidTransactionException(xid,"adding Cars="+location);
         TransRes tr = trans.get(xid);
         
-        HashMap <String, Car> curCars = null;
-        if (acqCurPage(tr,"Cars")) {
-        	curCars = tr.cars;
+        Car curCar = null;
+        if (acqCurEntry(tr,"Cars",location,true)) {
+        	curCar = tr.cars.get(location);
         } else {
         	abort(xid);
         }
         
-        Car car = null;
-        if(curCars.containsKey(location))
-        	car = new Car( curCars.get(location));
-        else
-        	car = new Car(location,0,0,0);
-        //car.price = car.price < price ? price : car.price;
-        
         if(price>0)
-        	car.price = price; // should directly overwrite price
-        car.numCars += numCars;
-        car.numAvail += numCars;
-        curCars.put(location,car);
+        	curCar.price = price; // should directly overwrite price
+        curCar.numCars += numCars;
+        curCar.numAvail += numCars;
+        
         return true;
     }
 
@@ -345,27 +497,21 @@ public class ResourceManagerImpl
     		throw new InvalidTransactionException(xid,"deleting Cars="+location);
         TransRes tr = trans.get(xid);
         
-        HashMap <String, Car> curCars = null;
-        if (acqCurPage(tr,"Cars")) {
-        	curCars = tr.cars;
+        Car curCar = null;
+        if (acqCurEntry(tr,"Cars",location,true)) {
+        	curCar = tr.cars.get(location);
         } else {
         	abort(xid);
         }
         
-        Car car = null;
-        if(curCars.containsKey(location))
-        	car = new Car( curCars.get(location));
-        else
-        	car = new Car(location,0,0,0);
-        //car.price = car.price < price ? price : car.price;
-        
-        car.numCars -= numCars;
-        car.numAvail -= numCars;
-        
-        if(car.numAvail<0||car.numCars<0)
+        if(curCar.numAvail<numCars||curCar.numCars<numCars)
         	return false;
-        if(car.numCars==0) curCars.remove(location);
-        else curCars.put(location,car);
+        
+        curCar.numCars -= numCars;
+        curCar.numAvail -= numCars;
+        
+        if(curCar.numCars==0) 
+        	curCar.location=null;
         return true;
     }
 
@@ -378,23 +524,13 @@ public class ResourceManagerImpl
     		throw new InvalidTransactionException(xid,"adding new customer="+custName);
         TransRes tr = trans.get(xid);
         
-        HashMap <String, Customer> curCustomers = null;
-        if (acqCurPage(tr,"Customers")) {
-        	curCustomers = tr.customers;
+        Customer curCustomer = null;
+        if (acqCurEntry(tr,"Customers",custName,true)) {
+        	curCustomer = tr.customers.get(custName);
         } else {
         	abort(xid);
         }
-        
-    	Customer cust = null;
-
-    	if(curCustomers.containsKey(custName))
-    		//cust = customers.get(custName);
-    		return false;
-    	else{
-    		cust = new Customer(custName);
-    		curCustomers.put(custName,cust);
-			return true;
-    	}
+        return true;
     }
 
     public boolean deleteCustomer(int xid, String custName) 
@@ -407,19 +543,15 @@ public class ResourceManagerImpl
     		throw new InvalidTransactionException(xid,"deleting new customer="+custName);
         TransRes tr = trans.get(xid);
         
-        HashMap <String, Customer> curCustomers = null;
-        if (acqCurPage(tr,"Customers")) {
-        	curCustomers = tr.customers;
+        Customer curCustomer = null;
+        if (acqCurEntry(tr,"Customers",custName,true)) {
+        	curCustomer = tr.customers.get(custName);
         } else {
         	abort(xid);
         }
+        curCustomer.custName = null;
+        return true;
         
-    	if(curCustomers.containsKey(custName)){
-    		curCustomers.remove(custName);
-    		return true;
-    	}
-    	else
-    		return false;
     }
 
 
@@ -433,22 +565,15 @@ public class ResourceManagerImpl
     		throw new InvalidTransactionException(xid,"querying Flight="+flightNum);
         TransRes tr = trans.get(xid);
         
-        if(tr.flights !=null){
-        	if(tr.flights.containsKey(flightNum))
-    			return tr.flights.get(flightNum).numAvail;
-        	else
-        		return -1;
+        Flight curFlight = null;
+        if (acqCurEntry(tr,"Flights",flightNum,false)) {
+        	curFlight = tr.flights.get(flightNum);
+        } else {
+        	abort(xid);
         }
-    	// Table level S-lock
-    	try {
-    		lm.lock(xid, "Flights", LockManager.READ);
-    	} catch (DeadlockException e) {
-    		System.err.println(e.getMessage());
-    		abort(xid);
-    	}
         
-    	if(flights.containsKey(flightNum))
-			return flights.get(flightNum).numAvail;
+    	if(curFlight!=null)
+			return curFlight.numAvail;
     	else
     		return -1;
     }	
@@ -462,23 +587,15 @@ public class ResourceManagerImpl
     		throw new InvalidTransactionException(xid,"querying Flight price="+flightNum);
         TransRes tr = trans.get(xid);
         
-        if(tr.flights !=null){
-        	if(tr.flights.containsKey(flightNum))
-        		return tr.flights.get(flightNum).price;
-        	else
-        		return -1;
+        Flight curFlight = null;
+        if (acqCurEntry(tr,"Flights",flightNum,false)) {
+        	curFlight = tr.flights.get(flightNum);
+        } else {
+        	abort(xid);
         }
-
-    	// Table level S-lock
-    	try {
-    		lm.lock(xid, "Flights", LockManager.READ);
-    	} catch (DeadlockException e) {
-    		System.err.println(e.getMessage());
-    		abort(xid);
-    	}
-    	
-    	if(flights.containsKey(flightNum))
-    		return flights.get(flightNum).price;
+        
+    	if(curFlight!=null)
+			return curFlight.price;
     	else
     		return -1;
     }
@@ -492,22 +609,15 @@ public class ResourceManagerImpl
     		throw new InvalidTransactionException(xid,"querying room="+location);
         TransRes tr = trans.get(xid);
         
-        if(tr.hotels !=null){
-        	if(tr.hotels.containsKey(location))
-        		return tr.hotels.get(location).numAvail;
-        	else
-        		return -1;
+        Hotel curHotel = null;
+        if (acqCurEntry(tr,"Hotels",location,false)) {
+        	curHotel = tr.hotels.get(location);
+        } else {
+        	abort(xid);
         }
-    	// Table level S-lock
-    	try {
-    		lm.lock(xid, "Hotels", LockManager.READ);
-    	} catch (DeadlockException e) {
-    		System.err.println(e.getMessage());
-    		abort(xid);
-    	}
     	
-    	if(hotels.containsKey(location))
-    		return hotels.get(location).numAvail;
+    	if(curHotel!=null)
+    		return curHotel.numAvail;
     	else
     		return -1;
     }
@@ -521,22 +631,15 @@ public class ResourceManagerImpl
     		throw new InvalidTransactionException(xid,"querying room price="+location);
         TransRes tr = trans.get(xid);
         
-        if(tr.hotels !=null){
-        	if(tr.hotels.containsKey(location))
-        		return tr.hotels.get(location).price;
-        	else
-        		return -1;
+        Hotel curHotel = null;
+        if (acqCurEntry(tr,"Hotels",location,false)) {
+        	curHotel = tr.hotels.get(location);
+        } else {
+        	abort(xid);
         }
-    	// Table level S-lock
-    	try {
-    		lm.lock(xid, "Hotels", LockManager.READ);
-    	} catch (DeadlockException e) {
-    		System.err.println(e.getMessage());
-    		abort(xid);
-    	}
     	
-    	if(hotels.containsKey(location))
-    		return hotels.get(location).price;
+    	if(curHotel!=null)
+    		return curHotel.price;
     	else
     		return -1;
     }
@@ -550,22 +653,15 @@ public class ResourceManagerImpl
     		throw new InvalidTransactionException(xid,"querying cars="+location);
         TransRes tr = trans.get(xid);
         
-        if(tr.cars !=null)	{
-        	if(tr.cars.containsKey(location))
-    			return tr.cars.get(location).numAvail;
-        	else
-        		return -1;
+        Car curCar = null;
+        if (acqCurEntry(tr,"Cars",location,false)) {
+        	curCar = tr.cars.get(location);
+        } else {
+        	abort(xid);
         }
-    	// Table level S-lock
-    	try {
-    		lm.lock(xid, "Cars", LockManager.READ);
-    	} catch (DeadlockException e) {
-    		System.err.println(e.getMessage());
-    		abort(xid);
-    	}
-    	
-    	if(cars.containsKey(location))
-			return cars.get(location).numAvail;
+        
+    	if(curCar!=null)
+			return curCar.numAvail;
     	else
     		return -1;
     }
@@ -579,22 +675,15 @@ public class ResourceManagerImpl
     		throw new InvalidTransactionException(xid,"querying cars price="+location);
         TransRes tr = trans.get(xid);
         
-        if(tr.cars !=null)	{
-        	if(tr.cars.containsKey(location))
-        		return tr.cars.get(location).price;
-        	else
-        		return -1;
+        Car curCar = null;
+        if (acqCurEntry(tr,"Cars",location,false)) {
+        	curCar = tr.cars.get(location);
+        } else {
+        	abort(xid);
         }
-    	// Table level S-lock
-    	try {
-    		lm.lock(xid, "Cars", LockManager.READ);
-    	} catch (DeadlockException e) {
-    		System.err.println(e.getMessage());
-    		abort(xid);
-    	}
-    	
-    	if(cars.containsKey(location))
-    		return cars.get(location).price;
+        
+    	if(curCar!=null)
+			return curCar.price;
     	else
     		return -1;
     }
@@ -609,28 +698,40 @@ public class ResourceManagerImpl
     		throw new InvalidTransactionException(xid,"querying billing of"+custName);
         TransRes tr = trans.get(xid);
         
-    	ArrayList<Reservation> revlist;
-        if(tr.reservations !=null)	{ 
-        	if(tr.reservations.containsKey(custName))
-        		revlist=tr.reservations.get(custName);
-        	else
-        		return 0;
-        	for(Reservation r:revlist) total+=r.price;
-        	return total;
-        }
-    	// Table level S-lock
-    	try {
-    		lm.lock(xid, "Reservations", LockManager.READ);
-    	} catch (DeadlockException e) {
-    		System.err.println(e.getMessage());
-    		abort(xid);
-    	}
-    	
-    	if(reservations.containsKey(custName))
-    		revlist=reservations.get(custName);
-    	else
+    	ArrayList<Reservation> curRevlist = null;
+         if (acqCurEntry(tr,"Reservations",custName,false)) {
+        	 curRevlist = tr.reservations.get(custName);
+         } else {
+         	abort(xid);
+         }
+         
+    	if(curRevlist==null)
     		return 0;
-    	for(Reservation r:revlist) total+=r.price;
+    	for(Reservation r:curRevlist) {
+    		switch(r.resvType){
+    			case rFlight:
+    				if (acqCurEntry(tr,"Flights",r.resvKey,false)) 
+    					total +=  tr.flights.get(r.resvKey).price;
+    				else
+    					abort(xid);
+    				break;
+    			case rHotel:
+    				if (acqCurEntry(tr,"Hotels",r.resvKey,false)) 
+    					total +=  tr.hotels.get(r.resvKey).price;
+    				else
+    					abort(xid);
+    				break;
+    			case rCar:
+    				if (acqCurEntry(tr,"Cars",r.resvKey,false)) 
+    					total +=  tr.cars.get(r.resvKey).price;
+    				else
+    					abort(xid);
+    				break;
+    			default: System.err.println("Unidentified reservation");
+					return 0;
+    		}
+    		
+    	}
     	return total;
     }
 
@@ -640,45 +741,36 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	int price=0;
-    	
     	// get transaction
     	if(!trans.containsKey(xid)) 
     		throw new InvalidTransactionException(xid,"reserving flight="+custName+"+"+flightNum);
         TransRes tr = trans.get(xid);
         
-        HashMap <String, Flight> curFlights = null;
-        if (acqCurPage(tr,"Flights")) {
-        	curFlights = tr.flights;
-        } else {
-        	abort(xid);
-        }
-    	
-        Flight flight = curFlights.get(flightNum);
-    	if(flight != null&&flight.numAvail>0){
-    		price = flight.price;
-    		--flight.numAvail;
-    		++flight.numSeats;
-    	} else 
-    		return false;
-    	
-    	Reservation rev = new Reservation(custName, 1, flightNum, price); // 1 for a flight
-    	ArrayList<Reservation> revlist;
-    	
-    	HashMap <String, ArrayList<Reservation>> curReservations = null;
-        if (acqCurPage(tr,"Reservations")) {
-        	curReservations = tr.reservations;
+        Flight curFlight = null;
+        if (acqCurEntry(tr,"Flights",flightNum,true)) {
+        	curFlight = tr.flights.get(flightNum);
         } else {
         	abort(xid);
         }
         
-    	if(!curReservations.containsKey(custName)){
-    		revlist= new ArrayList<Reservation>();
-    	}else{
-    		revlist=new ArrayList<Reservation>(curReservations.get(custName));
-    	}
-		revlist.add(rev);
-		curReservations.put(custName, revlist);
+    	ArrayList<Reservation> curRevlist = null;
+        if (acqCurEntry(tr,"Reservations",custName,true)) {
+       	 curRevlist = tr.reservations.get(custName);
+        } else {
+        	abort(xid);
+        }
+        
+    	if(curFlight != null&&curFlight.numAvail>0){
+    		//price = flight.price;
+    		--curFlight.numAvail;
+    		++curFlight.numSeats;
+    	} else 
+    		return false;
+    	
+    	Reservation rev = new Reservation(custName, 1, flightNum); // 1 for a flight
+        
+    	curRevlist.add(rev);
+
     	return true;
     }
  
@@ -691,42 +783,31 @@ public class ResourceManagerImpl
     		throw new InvalidTransactionException(xid,"reserving cars="+custName+"+"+location);
         TransRes tr = trans.get(xid);
         
-        int price = 0;
-        
-        HashMap <String, Car> curCars = null;
-        if (acqCurPage(tr,"Cars")) {
-        	curCars = tr.cars;
-        } else {
-        	abort(xid);
-        }
-    	
-        Car car = curCars.get(location);
-    	if(car != null&&car.numAvail>0){
-    		price = car.price;
-    		--car.numAvail;
-    		++car.numCars;
-    		
-    	} else return false;
-    	
-    	// 3 for a car
-    	Reservation rev = new Reservation(custName, 3, location,price);
-    	ArrayList<Reservation> revlist;
-    	
-        HashMap <String, ArrayList<Reservation>> curReservations = null;
-        if (acqCurPage(tr,"Reservations")) {
-        	curReservations = tr.reservations;
+        Car curCar = null;
+        if (acqCurEntry(tr,"Cars",location,true)) {
+        	curCar = tr.cars.get(location);
         } else {
         	abort(xid);
         }
         
-    	if(!curReservations.containsKey(custName)){
-    		revlist = new ArrayList<Reservation>();
-    	}else{
-    		revlist = new ArrayList<Reservation>(curReservations.get(custName));
-    	}
+    	ArrayList<Reservation> curRevlist = null;
+        if (acqCurEntry(tr,"Reservations",custName,true)) {
+       	 curRevlist = tr.reservations.get(custName);
+        } else {
+        	abort(xid);
+        }
+        
+    	if(curCar != null&&curCar.numAvail>0){
+    		//price = flight.price;
+    		--curCar.numAvail;
+    		++curCar.numCars;
+    	} else 
+    		return false;
     	
-		revlist.add(rev);
-		curReservations.put(custName, revlist);
+    	Reservation rev = new Reservation(custName, 3, location); // 3 for a car
+        
+    	curRevlist.add(rev);
+
     	return true;
     }
 
@@ -735,46 +816,35 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	
-    	int price=0;
-    	
     	// get transaction
     	if(!trans.containsKey(xid)) 
     		throw new InvalidTransactionException(xid,"reserving room="+custName+"+"+location);
         TransRes tr = trans.get(xid);
         
-        HashMap <String, Hotel> curHotels = null;
-        if (acqCurPage(tr,"Hotels")) {
-        	curHotels = tr.hotels;
-        } else {
-        	abort(xid);
-        }
-    	
-        Hotel hotel = curHotels.get(location);
-    	if(hotel != null&&hotel.numAvail>0){
-    		price = hotel.price;
-    		--hotel.numAvail;
-    		++hotel.numRooms;
-    	} else 
-    		return false;
-
-    	// 2 for a hotel room
-    	Reservation rev = new Reservation(custName,2,location,price);
-    	ArrayList<Reservation> revlist;
-    	
-    	HashMap <String, ArrayList<Reservation>> curReservations = null;
-        if (acqCurPage(tr,"Reservations")) {
-        	curReservations = tr.reservations;
+        Hotel curHotel = null;
+        if (acqCurEntry(tr,"Hotels",location,true)) {
+        	curHotel = tr.hotels.get(location);
         } else {
         	abort(xid);
         }
         
-    	if(!curReservations.containsKey(custName)){
-    		revlist= new ArrayList<Reservation>();
-    	}else{
-    		revlist=new ArrayList<Reservation>(curReservations.get(custName));
-    	}
-		revlist.add(rev);
-		curReservations.put(custName, revlist);
+    	ArrayList<Reservation> curRevlist = null;
+        if (acqCurEntry(tr,"Reservations",custName,true)) {
+       	 curRevlist = tr.reservations.get(custName);
+        } else {
+        	abort(xid);
+        }
+        
+    	if(curHotel != null&&curHotel.numAvail>0){
+    		//price = flight.price;
+    		--curHotel.numAvail;
+    		++curHotel.numRooms;
+    	} else 
+    		return false;
+    	
+    	Reservation rev = new Reservation(custName, 2, location); // 2 for a room
+    	curRevlist.add(rev);
+
     	return true;
     }
 
@@ -894,18 +964,22 @@ public class ResourceManagerImpl
 		custName=name;
 		//total=0;
 	}
+	public Customer(Customer customer) {
+		// TODO Auto-generated constructor stub
+		custName=customer.custName;
+	}
 }
 
  class Reservation{
 	String custName;
 	int resvType;
 	String resvKey;
-	int price; //for possible calculate
-	Reservation(String name,int resvT,String resvK, int pric){
+	//int price; //for possible calculate
+	Reservation(String name,int resvT,String resvK){//int pric
 		custName=name;
 		resvType=resvT;
 		resvKey=resvK;
-		price=pric;
+		//price=pric;
 		
 	}
 }
@@ -913,27 +987,27 @@ public class ResourceManagerImpl
  class TransRes {
 	 public final int xid;
 	// Transaction's private current page for shadow paging
-    public HashMap <String, Flight> flights;
+    public Map <String, Flight> flights;
     
     // location as primary key
-    public HashMap <String, Car> cars;
+    public Map <String, Car> cars;
     
     // location as as primary key
-    public HashMap <String, Hotel> hotels;
+    public Map <String, Hotel> hotels;
     
     // custName as primary key
-    public HashMap <String, Customer> customers ;
+    public Map <String, Customer> customers ;
     
     // resvKey or custName? as primary key, combined with customer table
-    public HashMap <String, ArrayList<Reservation>> reservations;
+    public Map <String, ArrayList<Reservation>> reservations;
     
     public TransRes (int xid) {
     	this.xid = xid;
-    	flights = null;
-    	cars = null;
-    	hotels = null;
-    	customers = null;
-    	reservations = null;
+    	flights = new HashMap <String, Flight>();
+    	cars = new HashMap <String, Car>();
+    	hotels = new HashMap <String, Hotel>();
+    	customers = new HashMap <String, Customer>();
+    	reservations = new HashMap <String, ArrayList<Reservation>>();
     }
     
     /*
@@ -958,3 +1032,5 @@ public class ResourceManagerImpl
     }
     */
 }
+
+ 
