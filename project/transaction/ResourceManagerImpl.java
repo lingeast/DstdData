@@ -51,35 +51,30 @@ public class ResourceManagerImpl
 	    	case CAR:
 	    		if(tr.cars.containsKey(Primarykey))
 	    			if(!flag_wr)return true;
-	    		else
-	    			break;
+	    		break;
 			case HOTEL:
 	    		if(tr.hotels.containsKey(Primarykey))
-	    			return true;
-	    		else
-	    			if(!flag_wr)break;
+	    			if(!flag_wr)return true;
+	    		break;
 		    case FLIGHT:
 		    	if(tr.flights.containsKey(Primarykey))
 		    		if(!flag_wr)return true;
-	    		else
-	    			break;
+	    		break;
 		    case CUSTOMER:
 		    	if(tr.customers.containsKey(Primarykey))
 		    		if(!flag_wr)return true;
-		    	else
-		    		break;
+		    	break;
 	    	case RESERVATION:
 		    	if(tr.reservations.containsKey(Primarykey))
 		    		if(!flag_wr)return true;
-		    	else
-		    		break;
+		    	break;
 			default: System.err.println("Unidentified " + tableName);
 				return false;
     	}
     	//locking flag = true means write
     	if(flag_wr){
 	    	try {
-				lm.lock(tr.xid, tableName+Primarykey, LockManager.WRITE);
+				lm.lock(tr.xid, String.valueOf(tableName)+Primarykey, LockManager.WRITE);
 	    	} catch(DeadlockException dle) {	// handle deadlock
 				System.err.println(dle.getMessage());
 				//abort(xid);
@@ -88,7 +83,7 @@ public class ResourceManagerImpl
     	}
     	else{
         	try {
-    			lm.lock(tr.xid, tableName+Primarykey, LockManager.READ);
+    			lm.lock(tr.xid, String.valueOf(tableName)+Primarykey, LockManager.READ);
         	} catch(DeadlockException dle) {	// handle deadlock
     			System.err.println(dle.getMessage());
     			//abort(xid);
@@ -129,7 +124,7 @@ public class ResourceManagerImpl
 			    	return true;
 			
 		    	case RESERVATION:
-			    	if(reservations.containsKey(Primarykey))
+			    	if(reservations.containsKey(Primarykey)&&reservations.get(Primarykey)!=null)
 							tr.reservations.put(Primarykey,new ArrayList<Reservation>(reservations.get(Primarykey)));
 			    	else
 							tr.reservations.put(Primarykey,new ArrayList<Reservation>());
