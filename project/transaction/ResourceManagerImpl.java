@@ -204,7 +204,7 @@ public class ResourceManagerImpl
         
         Flight flight;
         if(curFlights.containsKey(flightNum))
-        	flight = curFlights.get(flightNum);
+        	flight = new Flight(curFlights.get(flightNum));
         else
         	flight = new Flight(flightNum,0,0,0);
         //flight.price = flight.price < price ? price : flight.price;
@@ -261,7 +261,7 @@ public class ResourceManagerImpl
     	
         Hotel hotel = null;
         if(curHotels.containsKey(location))
-            hotel = curHotels.get(location);
+            hotel = new Hotel(curHotels.get(location));
         else
             hotel = new Hotel(location,0,0,0);
         //hotel.price=hotel.price<price?price:hotel.price;
@@ -290,12 +290,19 @@ public class ResourceManagerImpl
         	abort(xid);
         }
         
-        if(curHotels.containsKey(location)){
-        	curHotels.remove(location);
-            return true;
-        }
+        Hotel hotel = null;
+        if(curHotels.containsKey(location))
+            hotel = new Hotel(curHotels.get(location));
         else
-            return false;
+            hotel = new Hotel(location,0,0,0);
+        hotel.numRooms -= numRooms;
+        hotel.numAvail -= numRooms;
+
+        if(hotel.numAvail<0||hotel.numRooms<0)
+        	return false;
+        if(hotel.numRooms==0) curHotels.remove(location);
+        else curHotels.put(location,hotel);
+        return true;
     }
 
     public boolean addCars(int xid, String location, int numCars, int price) 
@@ -318,7 +325,7 @@ public class ResourceManagerImpl
         
         Car car = null;
         if(curCars.containsKey(location))
-        	car = curCars.get(location);
+        	car = new Car( curCars.get(location));
         else
         	car = new Car(location,0,0,0);
         //car.price = car.price < price ? price : car.price;
@@ -348,12 +355,21 @@ public class ResourceManagerImpl
         	abort(xid);
         }
         
-        if(curCars.containsKey(location)){
-        	curCars.remove(location);
-        	return true;
-    	}
-    	else
-    		return false;
+        Car car = null;
+        if(curCars.containsKey(location))
+        	car = new Car( curCars.get(location));
+        else
+        	car = new Car(location,0,0,0);
+        //car.price = car.price < price ? price : car.price;
+        
+        car.numCars -= numCars;
+        car.numAvail -= numCars;
+        
+        if(car.numAvail<0||car.numCars<0)
+        	return false;
+        if(car.numCars==0) curCars.remove(location);
+        else curCars.put(location,car);
+        return true;
     }
 
     public boolean newCustomer(int xid, String custName) 
@@ -572,7 +588,7 @@ public class ResourceManagerImpl
         }
     	
         Flight flight = curFlights.get(flightNum);
-    	if(flight != null){
+    	if(flight != null&&flight.numAvail>0){
     		price = flight.price;
     		--flight.numAvail;
     		++flight.numSeats;
@@ -592,7 +608,7 @@ public class ResourceManagerImpl
     	if(!curReservations.containsKey(custName)){
     		revlist= new ArrayList<Reservation>();
     	}else{
-    		revlist=curReservations.get(custName);
+    		revlist=new ArrayList<Reservation>(curReservations.get(custName));
     	}
 		revlist.add(rev);
 		curReservations.put(custName, revlist);
@@ -620,7 +636,7 @@ public class ResourceManagerImpl
         }
     	
         Car car = curCars.get(location);
-    	if(car != null){
+    	if(car != null&&car.numAvail>0){
     		price = car.price;
     		--car.numAvail;
     		++car.numCars;
@@ -641,7 +657,7 @@ public class ResourceManagerImpl
     	if(!curReservations.containsKey(custName)){
     		revlist = new ArrayList<Reservation>();
     	}else{
-    		revlist = curReservations.get(custName);
+    		revlist = new ArrayList<Reservation>(curReservations.get(custName));
     	}
     	
 		revlist.add(rev);
@@ -671,7 +687,7 @@ public class ResourceManagerImpl
         }
     	
         Hotel hotel = curHotels.get(location);
-    	if(hotel != null){
+    	if(hotel != null&&hotel.numAvail>0){
     		price = hotel.price;
     		--hotel.numAvail;
     		++hotel.numRooms;
@@ -692,7 +708,7 @@ public class ResourceManagerImpl
     	if(!curReservations.containsKey(custName)){
     		revlist= new ArrayList<Reservation>();
     	}else{
-    		revlist=curReservations.get(custName);
+    		revlist=new ArrayList<Reservation>(curReservations.get(custName));
     	}
 		revlist.add(rev);
 		curReservations.put(custName, revlist);
@@ -746,6 +762,14 @@ public class ResourceManagerImpl
 		numSeats=numS;
 		numAvail=numA;
 	}
+
+	public Flight(Flight flight) {
+		flightNum=flight.flightNum;
+		price=flight.price;
+		numSeats=flight.numSeats;
+		numAvail=flight.numAvail;
+		// TODO Auto-generated constructor stub
+	}
 }
 
  class Car{
@@ -762,6 +786,13 @@ public class ResourceManagerImpl
 		price=pri;
 		numCars=numS;
 		numAvail=numA;
+	}
+	public Car(Car car) {
+		// TODO Auto-generated constructor stub
+		location=car.location;
+		price=car.price;
+		numCars=car.numCars;
+		numAvail=car.numAvail;
 	}
 
 }
@@ -782,6 +813,14 @@ public class ResourceManagerImpl
 		price=pri;
 		numRooms=numS;
 		numAvail=numA;
+	}
+
+	public Hotel(Hotel hotel) {
+		// TODO Auto-generated constructor stub
+		location=hotel.location;
+		price=hotel.price;
+		numRooms=hotel.numRooms;
+		numAvail=hotel.numAvail;
 	}
 }
 
