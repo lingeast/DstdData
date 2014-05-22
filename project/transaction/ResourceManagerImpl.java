@@ -2,6 +2,7 @@ package transaction;
 
 import lockmgr.*;
 
+import java.io.*;
 import java.rmi.*;
 import java.util.HashMap;
 import java.util.ArrayList;
@@ -82,7 +83,6 @@ public class ResourceManagerImpl
 				System.err.println(dle.getMessage());
 				abort(tr.xid);
 				throw new TransactionAbortedException(tr.xid,"Waiting for write key of"+String.valueOf(tableName)+Primarykey);
-				//abort(tr.xid);
 				//return false;
 			}
     	}
@@ -93,7 +93,6 @@ public class ResourceManagerImpl
     			System.err.println(dle.getMessage());
     			abort(tr.xid);
     			throw new TransactionAbortedException(tr.xid,"Waiting for read key of"+String.valueOf(tableName)+Primarykey);
-    			//abort(tr.xid);
     			//return false;
     		}
     		
@@ -260,7 +259,7 @@ public class ResourceManagerImpl
 
     }*/
     public static void main(String args[]) {
-    	System.setSecurityManager(new RMISecurityManager());
+    //	System.setSecurityManager(new RMISecurityManager());
 
     	String rmiName = System.getProperty("rmiName");
     	if (rmiName == null || rmiName.equals("")) {
@@ -283,8 +282,98 @@ public class ResourceManagerImpl
     }
     
     
-    public ResourceManagerImpl() throws RemoteException {
+    public ResourceManagerImpl() throws RemoteException,IOException, ClassNotFoundException {
     	xidCounter = 0;
+////////////////////////////////////////////////////////////////
+    	String[] file={"Pointer","Flights1","Flights2","Hotels1","Hotels2","Cars1","Cars2","Customers1","Customers2","Reservations1","Reservations2"};
+    	FileReader[] ff = new FileReader[11];
+    	boolean flag_restore = true;
+    	for(int i = 0;i<10;i++){
+	    	try{
+	    		ff[i] = new FileReader(file[i]); 
+	    	}catch(FileNotFoundException FN){
+	    		File newfile = new File(file[i]);
+	    	      // creates the file
+	    		newfile.createNewFile();
+	    	    ff[i] = new FileReader(file[i]); 
+	    	
+		    	if(i == 0){//if pointer not exists, create a new one and point to 1  //no need to restore
+		    		flag_restore = false;
+		    	    FileWriter writer = new FileWriter(file[0]); 
+		  	      // Writes the content to the file
+		    	    writer.write("11111"); 
+		    	    writer.flush();
+		    	    writer.close();
+		    	}
+	    	}
+    	}
+    	char [] charb = new char[1];
+    	ff[0].read(charb);
+    	ObjectInputStream ois;
+    	if(flag_restore){
+    		try{
+    		
+    		for(int i = 0; i<5;++i){
+    		if(charb[i]==1){
+    				ois = new ObjectInputStream(new FileInputStream(file[1]));
+    				Flight[] flight_now = (Flight[]) ois.readObject();
+    			for(Flight f:flight_now) flights.put(f.flightNum, f);
+    				ois = new ObjectInputStream(new FileInputStream(file[3]));
+    				Hotel[] hotel_now = (Hotel[]) ois.readObject();
+    			for(Hotel f:hotel_now) hotels.put(f.location, f);
+    				ois = new ObjectInputStream(new FileInputStream(file[5]));
+    				Car[] car_now = (Car[]) ois.readObject();
+    			for(Car f:car_now) cars.put(f.location, f);
+    				ois = new ObjectInputStream(new FileInputStream(file[7]));
+    				Customer[] customer_now = (Customer[]) ois.readObject();
+    			for(Customer f:customer_now) customers.put(f.custName, f);
+    				ois = new ObjectInputStream(new FileInputStream(file[9]));
+    				Reservation[] reslist_now = (Reservation[]) ois.readObject();
+    			for(Reservation f:reslist_now) 
+    				if(reservations.containsKey(f.custName))
+    					reservations.get(f.custName).add(f);
+    				else{
+    					ArrayList<Reservation> newlist = new ArrayList<Reservation>();
+    					newlist.add(f);
+    					reservations.put(f.custName,newlist);
+    				}
+    		}
+    		if(charb[i]==2){
+    				ois = new ObjectInputStream(new FileInputStream(file[2]));
+    				Flight[] flight_now = (Flight[]) ois.readObject();
+    			for(Flight f:flight_now) flights.put(f.flightNum, f);
+    				ois = new ObjectInputStream(new FileInputStream(file[4]));
+    				Hotel[] hotel_now = (Hotel[]) ois.readObject();
+    			for(Hotel f:hotel_now) hotels.put(f.location, f);
+    				ois = new ObjectInputStream(new FileInputStream(file[6]));
+    				Car[] car_now = (Car[]) ois.readObject();
+    			for(Car f:car_now) cars.put(f.location, f);
+    				ois = new ObjectInputStream(new FileInputStream(file[8]));
+    				Customer[] customer_now = (Customer[]) ois.readObject();
+    			for(Customer f:customer_now) customers.put(f.custName, f);
+    				ois = new ObjectInputStream(new FileInputStream(file[10]));
+    				Reservation[] reslist_now = (Reservation[]) ois.readObject();
+    			for(Reservation f:reslist_now) 
+    				if(reservations.containsKey(f.custName))
+    					reservations.get(f.custName).add(f);
+    				else{
+    					ArrayList<Reservation> newlist = new ArrayList<Reservation>();
+    					newlist.add(f);
+    					reservations.put(f.custName,newlist);
+    				}
+    			}
+    			}
+    		} catch (Exception ex) {
+    			System.err.println("Can't load database:" + ex);
+    			System.exit(1);
+    	    }
+    	}
+    	
+    	ObjectOutputStream[] oos = null;
+    	for(int i = 0; i<10; ++i){
+    		oos[i] = new ObjectOutputStream(new FileOutputStream(file[i]));
+    	}
+////////////////////////////////////////////////////////////////
     }
 
 
