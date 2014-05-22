@@ -22,9 +22,10 @@ public class ResourceManagerImpl
     public static final int CAR = 3;
     public static final int CUSTOMER = 4;
     public static final int RESERVATION = 5;
-    
+    String[] file={"Pointer","Flights1","Flights2","Hotels1","Hotels2","Cars1","Cars2","Customers1","Customers2","Reservations1","Reservations2"};
 	LockManager lm = new LockManager();
-    
+	int [] pointer =new int [5];
+	boolean flag_pointerbefore = true;
     // Mapping xid to transaction private resources
     HashMap <Integer, TransRes> trans = new HashMap<Integer, TransRes>();
 
@@ -258,6 +259,15 @@ public class ResourceManagerImpl
     	
 
     }*/
+    
+    private void selftest() throws TransactionAbortedException, InvalidTransactionException, ClassNotFoundException, IOException{
+    	TransRes T1 = new TransRes(start());
+    	addFlight(T1.xid,"aFlight",100,100);
+    	commit(T1.xid);
+    	ResourceManagerImpl obj = new ResourceManagerImpl();
+    	obj.flights.get(T1.xid);
+    }
+    
     public static void main(String args[]) {
     //	System.setSecurityManager(new RMISecurityManager());
 
@@ -272,6 +282,9 @@ public class ResourceManagerImpl
 		}
 		try {
 			ResourceManagerImpl obj = new ResourceManagerImpl();
+			
+			obj.selftest();
+			
 			Naming.rebind(rmiName, obj);
 			System.out.println("RM bound");
 		} 
@@ -279,13 +292,15 @@ public class ResourceManagerImpl
 			System.err.println("RM not bound:" + e);
 			System.exit(1);
 		}
+		
+		
     }
     
     
     public ResourceManagerImpl() throws RemoteException,IOException, ClassNotFoundException {
     	xidCounter = 0;
 ////////////////////////////////////////////////////////////////
-    	String[] file={"Pointer","Flights1","Flights2","Hotels1","Hotels2","Cars1","Cars2","Customers1","Customers2","Reservations1","Reservations2"};
+    	
     	FileReader[] ff = new FileReader[11];
     	boolean flag_restore = true;
     	for(int i = 0;i<10;i++){
@@ -301,78 +316,56 @@ public class ResourceManagerImpl
 		    		flag_restore = false;
 		    	    FileWriter writer = new FileWriter(file[0]); 
 		  	      // Writes the content to the file
-		    	    writer.write("11111"); 
+		    	    writer.write("00000");
 		    	    writer.flush();
 		    	    writer.close();
 		    	}
 	    	}
     	}
-    	char [] charb = new char[1];
+
+    	char [] charb = new char[5];
     	ff[0].read(charb);
-    	ObjectInputStream ois;
+    	ff[0].close();
+    	ObjectInputStream ois = null;
     	if(flag_restore){
     		try{
-    		
     		for(int i = 0; i<5;++i){
-    		if(charb[i]==1){
-    				ois = new ObjectInputStream(new FileInputStream(file[1]));
-    				Flight[] flight_now = (Flight[]) ois.readObject();
-    			for(Flight f:flight_now) flights.put(f.flightNum, f);
-    				ois = new ObjectInputStream(new FileInputStream(file[3]));
-    				Hotel[] hotel_now = (Hotel[]) ois.readObject();
-    			for(Hotel f:hotel_now) hotels.put(f.location, f);
-    				ois = new ObjectInputStream(new FileInputStream(file[5]));
-    				Car[] car_now = (Car[]) ois.readObject();
-    			for(Car f:car_now) cars.put(f.location, f);
-    				ois = new ObjectInputStream(new FileInputStream(file[7]));
-    				Customer[] customer_now = (Customer[]) ois.readObject();
-    			for(Customer f:customer_now) customers.put(f.custName, f);
-    				ois = new ObjectInputStream(new FileInputStream(file[9]));
-    				Reservation[] reslist_now = (Reservation[]) ois.readObject();
-    			for(Reservation f:reslist_now) 
-    				if(reservations.containsKey(f.custName))
-    					reservations.get(f.custName).add(f);
-    				else{
-    					ArrayList<Reservation> newlist = new ArrayList<Reservation>();
-    					newlist.add(f);
-    					reservations.put(f.custName,newlist);
-    				}
+    			pointer[i] =charb[i]-'0';
+    			try{
+    			switch(i){
+		    		case 0:
+		    			ois = new ObjectInputStream(new FileInputStream(file[(1+pointer[i])]));
+		    			flights = (HashMap <String, Flight>)ois.readObject();
+		    			break;
+		    		case 1:
+		    			ois = new ObjectInputStream(new FileInputStream(file[3+pointer[i]]));
+		    			hotels = (HashMap <String, Hotel>)ois.readObject();
+		    			break;
+		    		case 2:
+		    			ois = new ObjectInputStream(new FileInputStream(file[5+pointer[i]]));
+		    			cars = (HashMap <String, Car>)ois.readObject();
+		    			break;
+		    		case 3:
+		    			ois = new ObjectInputStream(new FileInputStream(file[7+pointer[i]]));
+		    			customers = (HashMap <String, Customer>)ois.readObject();
+		    			break;
+		    		case 4:
+		    			ois = new ObjectInputStream(new FileInputStream(file[9+pointer[i]]));
+		    			 reservations = (HashMap<String, ArrayList<Reservation>>)ois.readObject();
+		    			break;
+		    		default: break;
+    			}
+    			ois.close();
+    			}catch(EOFException  eo){
+    				
+    			}
     		}
-    		if(charb[i]==2){
-    				ois = new ObjectInputStream(new FileInputStream(file[2]));
-    				Flight[] flight_now = (Flight[]) ois.readObject();
-    			for(Flight f:flight_now) flights.put(f.flightNum, f);
-    				ois = new ObjectInputStream(new FileInputStream(file[4]));
-    				Hotel[] hotel_now = (Hotel[]) ois.readObject();
-    			for(Hotel f:hotel_now) hotels.put(f.location, f);
-    				ois = new ObjectInputStream(new FileInputStream(file[6]));
-    				Car[] car_now = (Car[]) ois.readObject();
-    			for(Car f:car_now) cars.put(f.location, f);
-    				ois = new ObjectInputStream(new FileInputStream(file[8]));
-    				Customer[] customer_now = (Customer[]) ois.readObject();
-    			for(Customer f:customer_now) customers.put(f.custName, f);
-    				ois = new ObjectInputStream(new FileInputStream(file[10]));
-    				Reservation[] reslist_now = (Reservation[]) ois.readObject();
-    			for(Reservation f:reslist_now) 
-    				if(reservations.containsKey(f.custName))
-    					reservations.get(f.custName).add(f);
-    				else{
-    					ArrayList<Reservation> newlist = new ArrayList<Reservation>();
-    					newlist.add(f);
-    					reservations.put(f.custName,newlist);
-    				}
-    			}
-    			}
     		} catch (Exception ex) {
     			System.err.println("Can't load database:" + ex);
     			System.exit(1);
     	    }
     	}
-    	
-    	ObjectOutputStream[] oos = null;
-    	for(int i = 0; i<10; ++i){
-    		oos[i] = new ObjectOutputStream(new FileOutputStream(file[i]));
-    	}
+
 ////////////////////////////////////////////////////////////////
     }
 
@@ -386,9 +379,43 @@ public class ResourceManagerImpl
     	
     }
 
+    private void push2file(Object obj,int type, int filenumber) throws FileNotFoundException, IOException{
+    	ObjectOutputStream oos = null;
+    	switch(type){
+    	case 0: // push pointer
+    	    FileWriter writer = new FileWriter(file[0]); 
+    	    for(int i=0;i<5;i++)
+    	    	writer.write(pointer[i]+'0');
+    	    writer.flush();
+    	    writer.close();
+    	    break;
+    	case FLIGHT: 
+    		oos = new ObjectOutputStream(new FileOutputStream(file[filenumber]));
+			oos.writeObject((HashMap <String, Flight>)obj);
+			break;
+    	case HOTEL: 	
+    		oos = new ObjectOutputStream(new FileOutputStream(file[filenumber]));
+			oos.writeObject((HashMap <String, Hotel>)obj);
+			break;
+    	case CAR: 
+    		oos = new ObjectOutputStream(new FileOutputStream(file[filenumber]));
+			oos.writeObject((HashMap <String, Car>)obj);
+			break;
+    	case CUSTOMER: 
+    		oos = new ObjectOutputStream(new FileOutputStream(file[filenumber]));
+			oos.writeObject((HashMap <String, Customer>)obj);
+			break;
+    	case RESERVATION: 	
+    		oos = new ObjectOutputStream(new FileOutputStream(file[filenumber]));
+			oos.writeObject((HashMap <String,  ArrayList<Reservation>>)obj);
+			break;
+    	}
+		oos.flush();
+		oos.close();
+    }
+    
     public boolean commit(int xid)
-	throws RemoteException, 
-	       TransactionAbortedException, 
+	throws TransactionAbortedException, 
 	       InvalidTransactionException {
     	System.out.println("Committing");
     	
@@ -397,7 +424,7 @@ public class ResourceManagerImpl
     		assert(false);
     	// update current to be shadow
     	
-    	if (finished.cars != null) {
+    	if (!finished.cars .isEmpty()) {
     		HashMap <String, Car> cars_shadowing = new HashMap <String, Car>(cars);
     		for (String key : finished.cars.keySet()) {
     			if(finished.cars.get(key)!=null)
@@ -406,9 +433,18 @@ public class ResourceManagerImpl
     				cars_shadowing.remove(key);
     		}
     		cars = cars_shadowing;
+    		//push to file[5] or file[6]
+			try{
+				push2file(cars,CAR,6-pointer[2]);
+			}catch(FileNotFoundException fnfe){
+				return false;
+			}catch(IOException io){
+				return false;
+			}
+			pointer[2] = 1-pointer[2];
     	}
     	
-    	if (finished.hotels != null){
+    	if (!finished.hotels .isEmpty()){
     		HashMap <String, Hotel> hotels_shadowing = new HashMap <String, Hotel>(hotels);
     		for (String key : finished.hotels.keySet()) {
     			if(finished.hotels.get(key)!=null)
@@ -417,9 +453,19 @@ public class ResourceManagerImpl
     				hotels_shadowing.remove(key);
     		}
     		hotels = hotels_shadowing;
+    		//push to file[3] or file[4]
+			try{
+				push2file(hotels,HOTEL,4-pointer[1]);
+					
+			}catch(FileNotFoundException fnfe){
+				return false;
+			}catch(IOException io){
+				return false;
+			}
+			pointer[1] = 1-pointer[1];
     	}
     	
-    	if (finished.flights != null) {
+    	if (!finished.flights .isEmpty()) {
     		HashMap <String, Flight> flights_shadowing = new HashMap <String, Flight>(flights);
     		for (String key : finished.flights.keySet()) {
     			if(finished.flights.get(key)!=null)
@@ -427,10 +473,19 @@ public class ResourceManagerImpl
     			else
     				flights_shadowing.remove(key);
     		}
-    		flights = flights_shadowing;
+    		flights =  flights_shadowing;
+    		//push to file[1] or file[2]
+			try{
+				push2file(flights,FLIGHT,2-pointer[0]);
+			}catch(FileNotFoundException fnfe){
+				return false;
+			}catch(IOException io){
+				return false;
+			}
+			pointer[0] = 1-pointer[0];
     	}
     	
-    	if (finished.customers != null){
+    	if (!finished.customers .isEmpty()){
     		HashMap <String, Customer> customers_shadowing = new HashMap <String, Customer>(customers);
     		for (String key : finished.customers.keySet()) {
     			if(finished.customers.get(key)!=null)
@@ -439,9 +494,18 @@ public class ResourceManagerImpl
     				customers_shadowing.remove(key);
     		}
     		customers = customers_shadowing;
+    		//push to file[7] or file[8]
+			try{
+				push2file(customers,CUSTOMER,8-pointer[3]);
+			}catch(FileNotFoundException fnfe){
+				return false;
+			}catch(IOException io){
+				return false;
+			}
+			pointer[3] = 1-pointer[3];
     	}
  
-    	if (finished.reservations != null) {
+    	if (!finished.reservations .isEmpty()) {
     		HashMap <String, ArrayList<Reservation>> reservations_shadowing = new HashMap <String, ArrayList<Reservation>>(reservations);
     		for (String key : finished.reservations.keySet()) {
     			if(finished.reservations.get(key)!=null)
@@ -450,7 +514,26 @@ public class ResourceManagerImpl
     				reservations_shadowing.remove(key);
     		}
     		reservations = reservations_shadowing;
+    		//push to file[9] or file[10]
+			try{
+				push2file(reservations,RESERVATION,10-pointer[4]);
+			}catch(FileNotFoundException fnfe){
+				return false;
+			}catch(IOException io){
+				return false;
+			}
+			pointer[4] = 1-pointer[4];
     	}
+    	
+    	//swap pointer
+		try{
+	    	if(flag_pointerbefore)	//for test, be4 or after pointer switch
+	    		push2file(null,0,0);
+		}catch(FileNotFoundException fnfe){
+			return false;
+		}catch(IOException io){
+			return false;
+		}
     	// releases its locks
     	lm.unlockAll(xid);
     	
@@ -1004,18 +1087,20 @@ public class ResourceManagerImpl
 
     public boolean dieBeforePointerSwitch() 
     		throws RemoteException {
+    	flag_pointerbefore = false;
     	return true;
     }
 
     public boolean dieAfterPointerSwitch() 
 	throws RemoteException {
+    	flag_pointerbefore = true;
     	return true;
     }
 
 }
 
 /////////////////////////////////////////////////////////////////////   
- class Flight{
+ class Flight implements Serializable {
 	String flightNum;
 	int price;
 	int numSeats;
@@ -1044,7 +1129,7 @@ public class ResourceManagerImpl
 	}
 }
 
- class Car{
+ class Car implements Serializable{
 	String location;
 	int price;
 	int numCars;
@@ -1069,7 +1154,7 @@ public class ResourceManagerImpl
 
 }
 
- class Hotel{
+ class Hotel implements Serializable{
 	
 	String location;
 	int price;
@@ -1096,7 +1181,7 @@ public class ResourceManagerImpl
 	}
 }
 
- class Customer{
+ class Customer implements Serializable{
 	String custName;
 	//int total;
 	Customer(String name){
@@ -1109,7 +1194,7 @@ public class ResourceManagerImpl
 	}
 }
 
- class Reservation{
+ class Reservation implements Serializable{
 	String custName;
 	int resvType;
 	String resvKey;
