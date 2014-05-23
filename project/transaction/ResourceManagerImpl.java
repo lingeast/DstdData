@@ -22,10 +22,11 @@ public class ResourceManagerImpl
     public static final int CAR = 3;
     public static final int CUSTOMER = 4;
     public static final int RESERVATION = 5;
-    String[] file={"Pointer","Flights1","Flights2","Hotels1","Hotels2","Cars1","Cars2","Customers1","Customers2","Reservations1","Reservations2"};
+    String[] file={"data/Pointer","data/Flights1","data/Flights2","data/Hotels1","data/Hotels2","data/Cars1","data/Cars2","data/Customers1","data/Customers2","data/Reservations1","data/Reservations2"};
 	LockManager lm = new LockManager();
-	int [] pointer =new int [5];
-	boolean flag_pointerbefore = true;
+	int [] pointer =new int [6];   //the 6th represents how many transactions ran.
+	boolean flag_pointerbefore = false;
+	boolean flag_pointerafter = false;
     // Mapping xid to transaction private resources
     HashMap <Integer, TransRes> trans = new HashMap<Integer, TransRes>();
 
@@ -265,11 +266,13 @@ public class ResourceManagerImpl
     	addFlight(T1.xid,"aFlight",100,100);
     	commit(T1.xid);
     	ResourceManagerImpl obj = new ResourceManagerImpl();
-    	obj.flights.get(T1.xid);
+    	TransRes T2 = new TransRes(obj.start());
+    	obj.queryFlight(T2.xid, "aFlight");
+    	
     }
     
     public static void main(String args[]) {
-    //	System.setSecurityManager(new RMISecurityManager());
+    	System.setSecurityManager(new RMISecurityManager());
 
     	String rmiName = System.getProperty("rmiName");
     	if (rmiName == null || rmiName.equals("")) {
@@ -283,7 +286,7 @@ public class ResourceManagerImpl
 		try {
 			ResourceManagerImpl obj = new ResourceManagerImpl();
 			
-			obj.selftest();
+			//obj.selftest();
 			
 			Naming.rebind(rmiName, obj);
 			System.out.println("RM bound");
@@ -303,7 +306,11 @@ public class ResourceManagerImpl
     	
     	FileReader[] ff = new FileReader[11];
     	boolean flag_restore = true;
-    	for(int i = 0;i<10;i++){
+    	
+    	new File("data").mkdir(); //not yet exist
+			
+    	
+    	for(int i = 0;i<11;i++){  //reading file
 	    	try{
 	    		ff[i] = new FileReader(file[i]); 
 	    	}catch(FileNotFoundException FN){
@@ -316,20 +323,20 @@ public class ResourceManagerImpl
 		    		flag_restore = false;
 		    	    FileWriter writer = new FileWriter(file[0]); 
 		  	      // Writes the content to the file
-		    	    writer.write("00000");
+		    	    writer.write("000000");
 		    	    writer.flush();
 		    	    writer.close();
 		    	}
 	    	}
     	}
 
-    	char [] charb = new char[5];
+    	  	char [] charb = new char[6];
     	ff[0].read(charb);
     	ff[0].close();
     	ObjectInputStream ois = null;
-    	if(flag_restore){
-    		try{
-    		for(int i = 0; i<5;++i){
+    	if(flag_restore){//input data
+    		//try{
+    		for(int i = 0; i<6;++i){
     			pointer[i] =charb[i]-'0';
     			try{
     			switch(i){
@@ -353,17 +360,16 @@ public class ResourceManagerImpl
 		    			ois = new ObjectInputStream(new FileInputStream(file[9+pointer[i]]));
 		    			 reservations = (HashMap<String, ArrayList<Reservation>>)ois.readObject();
 		    			break;
+		    		case 5:
+		    			xidCounter = pointer[i];
 		    		default: break;
     			}
     			ois.close();
     			}catch(EOFException  eo){
-    				
+    				break;
     			}
     		}
-    		} catch (Exception ex) {
-    			System.err.println("Can't load database:" + ex);
-    			System.exit(1);
-    	    }
+    		
     	}
 
 ////////////////////////////////////////////////////////////////
@@ -373,18 +379,26 @@ public class ResourceManagerImpl
     // TRANSACTION INTERFACE
     public int start()
     		throws RemoteException {
-    	++xidCounter;
+    	++xidCounter; 
     	trans.put(xidCounter, new TransRes(xidCounter));
+    	pointer[5] = xidCounter;
+    	try {
+			push2file(null,0,0);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     	return (xidCounter);
     	
     }
+    
 
     private void push2file(Object obj,int type, int filenumber) throws FileNotFoundException, IOException{
     	ObjectOutputStream oos = null;
     	switch(type){
     	case 0: // push pointer
     	    FileWriter writer = new FileWriter(file[0]); 
-    	    for(int i=0;i<5;i++)
+    	    for(int i=0;i<6;i++)
     	    	writer.write(pointer[i]+'0');
     	    writer.flush();
     	    writer.close();
@@ -392,30 +406,38 @@ public class ResourceManagerImpl
     	case FLIGHT: 
     		oos = new ObjectOutputStream(new FileOutputStream(file[filenumber]));
 			oos.writeObject((HashMap <String, Flight>)obj);
+			oos.flush();
+			oos.close();
 			break;
     	case HOTEL: 	
     		oos = new ObjectOutputStream(new FileOutputStream(file[filenumber]));
 			oos.writeObject((HashMap <String, Hotel>)obj);
+			oos.flush();
+			oos.close();
 			break;
     	case CAR: 
     		oos = new ObjectOutputStream(new FileOutputStream(file[filenumber]));
 			oos.writeObject((HashMap <String, Car>)obj);
+			oos.flush();
+			oos.close();
 			break;
     	case CUSTOMER: 
     		oos = new ObjectOutputStream(new FileOutputStream(file[filenumber]));
 			oos.writeObject((HashMap <String, Customer>)obj);
+			oos.flush();
+			oos.close();
 			break;
     	case RESERVATION: 	
     		oos = new ObjectOutputStream(new FileOutputStream(file[filenumber]));
 			oos.writeObject((HashMap <String,  ArrayList<Reservation>>)obj);
+			oos.flush();
+			oos.close();
 			break;
     	}
-		oos.flush();
-		oos.close();
     }
     
     public boolean commit(int xid)
-	throws TransactionAbortedException, 
+	throws RemoteException,TransactionAbortedException, 
 	       InvalidTransactionException {
     	System.out.println("Committing");
     	
@@ -524,16 +546,19 @@ public class ResourceManagerImpl
 			}
 			pointer[4] = 1-pointer[4];
     	}
-    	
+    	if(flag_pointerbefore)	//for test, be4 or after pointer switch
+    		dieNow();
     	//swap pointer
 		try{
-	    	if(flag_pointerbefore)	//for test, be4 or after pointer switch
-	    		push2file(null,0,0);
+	    	push2file(null,0,0);
+
 		}catch(FileNotFoundException fnfe){
 			return false;
 		}catch(IOException io){
 			return false;
 		}
+	    if(flag_pointerafter)	//for test, be4 or after pointer switch
+	    	dieNow();
     	// releases its locks
     	lm.unlockAll(xid);
     	
@@ -559,10 +584,10 @@ public class ResourceManagerImpl
 	       InvalidTransactionException {
     	
     	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"adding flight="+flightNum);
         TransRes tr = trans.get(xid);
-        
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,flightNum);
+            		else throw new TransactionAbortedException(xid,flightNum);
         Flight curFlight = null;
         if (acqCurEntry(tr,FLIGHT,flightNum,true)) {
         	curFlight = tr.flights.get(flightNum);
@@ -584,10 +609,10 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"deleting flight="+flightNum);
         TransRes tr = trans.get(xid);
-        
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,flightNum);
+            		else throw new TransactionAbortedException(xid,flightNum);
         Flight curFlight = null;
         if (acqCurEntry(tr,FLIGHT,flightNum,true)) {
         	curFlight = tr.flights.get(flightNum);
@@ -607,10 +632,10 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"adding Rooms="+location);
         TransRes tr = trans.get(xid);
-        
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            		else throw new TransactionAbortedException(xid,location);
         Hotel curHotel = null;
         if (acqCurEntry(tr,HOTEL,location,true)) {
         	curHotel = tr.hotels.get(location);
@@ -632,10 +657,10 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"deleting Rooms="+location);
         TransRes tr = trans.get(xid);
-        
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            		else throw new TransactionAbortedException(xid,location);
         Hotel curHotel = null;
         if (acqCurEntry(tr,HOTEL,location,true)) {
         	curHotel = tr.hotels.get(location);
@@ -661,10 +686,10 @@ public class ResourceManagerImpl
 	       InvalidTransactionException {
     	
     	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"adding Cars="+location);
         TransRes tr = trans.get(xid);
-        
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            		else throw new TransactionAbortedException(xid,location);
         Car curCar = null;
         if (acqCurEntry(tr,CAR,location,true)) {
         	curCar = tr.cars.get(location);
@@ -686,10 +711,10 @@ public class ResourceManagerImpl
 	       InvalidTransactionException {
     	
     	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"deleting Cars="+location);
         TransRes tr = trans.get(xid);
-        
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            		else throw new TransactionAbortedException(xid,location);
         Car curCar = null;
         if (acqCurEntry(tr,CAR,location,true)) {
         	curCar = tr.cars.get(location);
@@ -713,10 +738,10 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"adding new customer="+custName);
         TransRes tr = trans.get(xid);
-        
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,custName);
+            		else throw new TransactionAbortedException(xid,custName);
         Customer curCustomer = null;
         if (acqCurEntry(tr,CUSTOMER,custName,true)) {
         	curCustomer = tr.customers.get(custName);
@@ -732,10 +757,10 @@ public class ResourceManagerImpl
 	       InvalidTransactionException {
     	
     	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"deleting new customer="+custName);
         TransRes tr = trans.get(xid);
-        
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,custName);
+            		else throw new TransactionAbortedException(xid,custName);
         Customer curCustomer = null;
         ArrayList<Reservation> curRevlist = null;
         if (acqCurEntry(tr,CUSTOMER,custName,true)&&acqCurEntry(tr,RESERVATION,custName,true)) {
@@ -781,11 +806,10 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"querying Flight="+flightNum);
-        TransRes tr = trans.get(xid);
-        
+				TransRes tr = trans.get(xid);
+        if(tr==null) 
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,flightNum);
+            		else throw new TransactionAbortedException(xid,flightNum);
         Flight curFlight = null;
         if (acqCurEntry(tr,FLIGHT,flightNum,false)) {
         	curFlight = tr.flights.get(flightNum);
@@ -803,11 +827,10 @@ public class ResourceManagerImpl
 	throws RemoteException, 
 	       TransactionAbortedException,
 	       InvalidTransactionException {
-    	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"querying Flight price="+flightNum);
-        TransRes tr = trans.get(xid);
-        
+				TransRes tr = trans.get(xid);
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,flightNum);
+            		else throw new TransactionAbortedException(xid,flightNum);
         Flight curFlight = null;
         if (acqCurEntry(tr,FLIGHT,flightNum,false)) {
         	curFlight = tr.flights.get(flightNum);
@@ -826,10 +849,10 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"querying room="+location);
         TransRes tr = trans.get(xid);
-        
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            		else throw new TransactionAbortedException(xid,location);
         Hotel curHotel = null;
         if (acqCurEntry(tr,HOTEL,location,false)) {
         	curHotel = tr.hotels.get(location);
@@ -848,12 +871,12 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"querying room price="+location);
         TransRes tr = trans.get(xid);
-        
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            		else throw new TransactionAbortedException(xid,location);
         Hotel curHotel = null;
-        if (acqCurEntry(tr,HOTEL,location,false)) {
+        if (tr!=null&&acqCurEntry(tr,HOTEL,location,false)) {
         	curHotel = tr.hotels.get(location);
         } else {
         	abort(xid);
@@ -870,12 +893,12 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"querying cars="+location);
         TransRes tr = trans.get(xid);
-        
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            		else throw new TransactionAbortedException(xid,location);
         Car curCar = null;
-        if (acqCurEntry(tr,CAR,location,false)) {
+        if (tr!=null&&acqCurEntry(tr,CAR,location,false)) {
         	curCar = tr.cars.get(location);
         } else {
         	abort(xid);
@@ -892,12 +915,12 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"querying cars price="+location);
         TransRes tr = trans.get(xid);
-        
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            		else throw new TransactionAbortedException(xid,location);
         Car curCar = null;
-        if (acqCurEntry(tr,CAR,location,false)) {
+        if (tr!=null&&acqCurEntry(tr,CAR,location,false)) {
         	curCar = tr.cars.get(location);
         } else {
         	abort(xid);
@@ -915,15 +938,15 @@ public class ResourceManagerImpl
 	       InvalidTransactionException {
     	int total=0;
     	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"querying billing of"+custName);
         TransRes tr = trans.get(xid);
-        
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,custName);
+            		else throw new TransactionAbortedException(xid,custName);
     	ArrayList<Reservation> curRevlist = null;
          if (acqCurEntry(tr,RESERVATION,custName,false)) {
         	 curRevlist = tr.reservations.get(custName);
          } else {
-         	abort(xid);
+         	 abort(xid);
          }
          
     	if(curRevlist==null)
@@ -962,10 +985,10 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"reserving flight="+custName+"+"+flightNum);
         TransRes tr = trans.get(xid);
-        
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,custName+flightNum);
+            		else throw new TransactionAbortedException(xid,custName+flightNum);
         Flight curFlight = null;
         if (acqCurEntry(tr,FLIGHT,flightNum,true)) {
         	curFlight = tr.flights.get(flightNum);
@@ -1001,10 +1024,10 @@ public class ResourceManagerImpl
 	       TransactionAbortedException,
 	       InvalidTransactionException {
     	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"reserving cars="+custName+"+"+location);
         TransRes tr = trans.get(xid);
-        
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            		else throw new TransactionAbortedException(xid,location);
         Car curCar = null;
         if (acqCurEntry(tr,CAR,location,true)) {
         	curCar = tr.cars.get(location);
@@ -1039,10 +1062,10 @@ public class ResourceManagerImpl
 	       InvalidTransactionException {
     	
     	// get transaction
-    	if(!trans.containsKey(xid)) 
-    		throw new InvalidTransactionException(xid,"reserving room="+custName+"+"+location);
         TransRes tr = trans.get(xid);
-        
+        if(tr==null) 
+            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            		else throw new TransactionAbortedException(xid,location);
         Hotel curHotel = null;
         if (acqCurEntry(tr,HOTEL,location,true)) {
         	curHotel = tr.hotels.get(location);
@@ -1087,13 +1110,13 @@ public class ResourceManagerImpl
 
     public boolean dieBeforePointerSwitch() 
     		throws RemoteException {
-    	flag_pointerbefore = false;
+    	flag_pointerbefore = true;
     	return true;
     }
 
     public boolean dieAfterPointerSwitch() 
 	throws RemoteException {
-    	flag_pointerbefore = true;
+    	flag_pointerafter = true;
     	return true;
     }
 
