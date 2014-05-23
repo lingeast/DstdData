@@ -586,7 +586,7 @@ public class ResourceManagerImpl
     	// get transaction
         TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,flightNum);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,flightNum);
             		else throw new TransactionAbortedException(xid,flightNum);
         Flight curFlight = null;
         if (acqCurEntry(tr,FLIGHT,flightNum,true)) {
@@ -611,7 +611,7 @@ public class ResourceManagerImpl
     	// get transaction
         TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,flightNum);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,flightNum);
             		else throw new TransactionAbortedException(xid,flightNum);
         Flight curFlight = null;
         if (acqCurEntry(tr,FLIGHT,flightNum,true)) {
@@ -634,7 +634,7 @@ public class ResourceManagerImpl
     	// get transaction
         TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,location);
             		else throw new TransactionAbortedException(xid,location);
         Hotel curHotel = null;
         if (acqCurEntry(tr,HOTEL,location,true)) {
@@ -659,7 +659,7 @@ public class ResourceManagerImpl
     	// get transaction
         TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,location);
             		else throw new TransactionAbortedException(xid,location);
         Hotel curHotel = null;
         if (acqCurEntry(tr,HOTEL,location,true)) {
@@ -688,7 +688,7 @@ public class ResourceManagerImpl
     	// get transaction
         TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,location);
             		else throw new TransactionAbortedException(xid,location);
         Car curCar = null;
         if (acqCurEntry(tr,CAR,location,true)) {
@@ -713,7 +713,7 @@ public class ResourceManagerImpl
     	// get transaction
         TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,location);
             		else throw new TransactionAbortedException(xid,location);
         Car curCar = null;
         if (acqCurEntry(tr,CAR,location,true)) {
@@ -740,7 +740,7 @@ public class ResourceManagerImpl
     	// get transaction
         TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,custName);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,custName);
             		else throw new TransactionAbortedException(xid,custName);
         Customer curCustomer = null;
         if (acqCurEntry(tr,CUSTOMER,custName,true)) {
@@ -759,7 +759,7 @@ public class ResourceManagerImpl
     	// get transaction
         TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,custName);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,custName);
             		else throw new TransactionAbortedException(xid,custName);
         Customer curCustomer = null;
         ArrayList<Reservation> curRevlist = null;
@@ -829,7 +829,7 @@ public class ResourceManagerImpl
 	       InvalidTransactionException {
 				TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,flightNum);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,flightNum);
             		else throw new TransactionAbortedException(xid,flightNum);
         Flight curFlight = null;
         if (acqCurEntry(tr,FLIGHT,flightNum,false)) {
@@ -851,7 +851,7 @@ public class ResourceManagerImpl
     	// get transaction
         TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,location);
             		else throw new TransactionAbortedException(xid,location);
         Hotel curHotel = null;
         if (acqCurEntry(tr,HOTEL,location,false)) {
@@ -873,7 +873,7 @@ public class ResourceManagerImpl
     	// get transaction
         TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,location);
             		else throw new TransactionAbortedException(xid,location);
         Hotel curHotel = null;
         if (tr!=null&&acqCurEntry(tr,HOTEL,location,false)) {
@@ -895,7 +895,7 @@ public class ResourceManagerImpl
     	// get transaction
         TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,location);
             		else throw new TransactionAbortedException(xid,location);
         Car curCar = null;
         if (tr!=null&&acqCurEntry(tr,CAR,location,false)) {
@@ -917,7 +917,7 @@ public class ResourceManagerImpl
     	// get transaction
         TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,location);
             		else throw new TransactionAbortedException(xid,location);
         Car curCar = null;
         if (tr!=null&&acqCurEntry(tr,CAR,location,false)) {
@@ -940,7 +940,7 @@ public class ResourceManagerImpl
     	// get transaction
         TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,custName);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,custName);
             		else throw new TransactionAbortedException(xid,custName);
     	ArrayList<Reservation> curRevlist = null;
          if (acqCurEntry(tr,RESERVATION,custName,false)) {
@@ -987,7 +987,7 @@ public class ResourceManagerImpl
     	// get transaction
         TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,custName+flightNum);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,custName+flightNum);
             		else throw new TransactionAbortedException(xid,custName+flightNum);
         Flight curFlight = null;
         if (acqCurEntry(tr,FLIGHT,flightNum,true)) {
@@ -1026,7 +1026,7 @@ public class ResourceManagerImpl
     	// get transaction
         TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,location);
             		else throw new TransactionAbortedException(xid,location);
         Car curCar = null;
         if (acqCurEntry(tr,CAR,location,true)) {
@@ -1064,7 +1064,7 @@ public class ResourceManagerImpl
     	// get transaction
         TransRes tr = trans.get(xid);
         if(tr==null) 
-            if(xid>pointer[5])throw new InvalidTransactionException(xid,location);
+            if(xid>pointer[5]+1)throw new InvalidTransactionException(xid,location);
             		else throw new TransactionAbortedException(xid,location);
         Hotel curHotel = null;
         if (acqCurEntry(tr,HOTEL,location,true)) {
